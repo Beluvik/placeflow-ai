@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlaceFlow AI — Resume-to-JD Verification &amp; Auto-Router</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'Inter', 'Segoe UI', 'sans-serif'],
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    @keyframes dashFlow {
+      to { stroke-dashoffset: -24; }
+    }
+    .svg-flow-line {
+      stroke-dasharray: 6 6;
+      transition: stroke 200ms ease, opacity 200ms ease;
+    }
+    .svg-flow-active {
+      animation: dashFlow 0.7s linear infinite;
+    }
+    .interactive-btn {
+      transition: transform 130ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease;
+    }
+    .interactive-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+    .interactive-btn:active:not(:disabled) {
+      transform: translateY(0px) scale(0.975);
+    }
+    .interactive-card {
+      transition: transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 150ms ease, border-color 150ms ease;
+    }
+    .interactive-card:hover {
+      transform: translateY(-2px);
+    }
+    .drawer-enter {
+      transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
+</head>
+<body class="bg-stone-50 text-stone-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased min-h-screen transition-colors">
+
+  <!-- Sticky Top Command Header -->
+  <header class="sticky top-0 z-30 border-b border-stone-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+
+      <!-- Brand Mark -->
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm tracking-tight shrink-0 shadow-sm">
+          PF
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="font-semibold text-sm sm:text-base tracking-tight truncate">PlaceFlow AI</span>
+            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-stone-700 dark:text-zinc-300">
+              PS-CA4
+            </span>
+          </div>
+          <p class="text-[11px] text-stone-500 dark:text-zinc-400 truncate hidden md:block">
+            Campus Automation · Gemini-Powered Placement Router
+          </p>
+        </div>
+      </div>
+
+      <!-- Segmented Navigation Tabs -->
+      <nav class="flex items-center gap-1 p-1 rounded-xl bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800">
+        <button onclick="switchTab('router')" id="tab-btn-router"
+          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10"/></svg>
+          <span>Auto-Router</span>
+          <span id="badge-processed-count" class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">0</span>
+        </button>
+        <button onclick="switchTab('actions')" id="tab-btn-actions"
+          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0-3-3m3 3 3-3M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          <span>HR Export &amp; Emails</span>
+        </button>
+        <button onclick="switchTab('student')" id="tab-btn-student"
+          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.1a7.5 7.5 0 0 1 15 0"/></svg>
+          <span>Student Portal</span>
+        </button>
+      </nav>
+
+      <!-- Right Controls: Gemini Key + Light/Dark Toggle -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button onclick="openKeyModal()" id="api-key-pill"
+          class="interactive-btn inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border cursor-pointer bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50">
+          <span id="api-key-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span id="api-key-label">Set Gemini Key</span>
+        </button>
+
+        <button onclick="toggleTheme()" id="theme-toggle-btn" title="Switch Light / Dark Mode"
+          class="interactive-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-stone-100 dark:hover:bg-zinc-800 text-xs font-medium cursor-pointer">
+          <svg class="w-4 h-4 hidden dark:block text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32 1.41-1.41"/></svg>
+          <svg class="w-4 h-4 block dark:hidden text-zinc-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/></svg>
+          <span id="theme-label" class="hidden sm:inline">Dark</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- ==================== TAB 1: BATCH AUTO-ROUTER ==================== -->
+    <section id="tab-router" class="space-y-6">
+
+      <!-- Hero Command Banner + Interactive Keyword Explainer + 1-to-3 Lane Diagram -->
+      <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 shadow-xs space-y-5">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+          <div class="space-y-2 max-w-2xl">
+            <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[11px] font-semibold">
+              <span>AUTOMATED PLACEMENT WORKFLOW · NOT A PROMPT WRAPPER</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-bold tracking-tight">
+              Verify resume proof. Catch buzzword bluffing. Auto-route every student.
+            </h1>
+            <p class="text-xs sm:text-sm text-stone-600 dark:text-zinc-400">
+              Batch-screen student PDFs against company JDs using <strong class="text-stone-900 dark:text-zinc-100">Gemini Structured JSON</strong> + <strong class="text-stone-900 dark:text-zinc-100">Deterministic Cutoff Rules</strong>.
+            </p>
+          </div>
+
+          <!-- Interactive Keyword Pills -->
+          <div class="flex flex-wrap gap-1.5 lg:justify-end">
+            <button onclick="selectKeyword('pdf')" data-kw="pdf"
+              class="kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer border-blue-500 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300">
+              Multimodal PDF Audit
+            </button>
+            <button onclick="selectKeyword('proof')" data-kw="proof"
+              class="kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-stone-700 dark:text-zinc-300">
+              Buzzword Detector
+            </button>
+            <button onclick="selectKeyword('rules')" data-kw="rules"
+              class="kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-stone-700 dark:text-zinc-300">
+              Deterministic Cutoffs
+            </button>
+            <button onclick="selectKeyword('reroute')" data-kw="reroute"
+              class="kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-stone-700 dark:text-zinc-300">
+              Cross-JD Auto-Router
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive Keyword Explainer Strip -->
+        <div id="kw-explainer" class="px-3.5 py-2.5 rounded-xl bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 text-xs flex items-center justify-between gap-3 flex-wrap">
+          <span id="kw-text" class="text-stone-700 dark:text-zinc-300">
+            <strong class="text-blue-600 dark:text-blue-400">Multimodal PDF Audit:</strong> Sends raw multi-column resume PDFs directly to Gemini — no broken text scraping.
+          </span>
+          <span id="pipeline-status-text" class="font-mono text-[11px] text-stone-500 dark:text-zinc-400">
+            Status: Ready
+          </span>
+        </div>
+
+        <!-- Interactive 1-Input -> Processor -> 3-Lane Diagram (Click Lanes to Filter!) -->
+        <div class="grid grid-cols-1 lg:grid-cols-11 items-center gap-3 pt-1">
+          <!-- Input Node -->
+          <div id="diag-input" class="lg:col-span-2 interactive-card rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 p-3.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-mono uppercase tracking-wider text-stone-400">Input</span>
+              <span id="diag-queue-count" class="text-[11px] font-mono font-semibold text-blue-600 dark:text-blue-400">0 PDFs</span>
+            </div>
+            <div class="text-xs font-semibold mt-1">Student Resume Batch</div>
+            <div class="text-[11px] text-stone-500 dark:text-zinc-400">PDFs + Company JD</div>
+          </div>
+
+          <!-- Connector 1 -->
+          <div class="hidden lg:flex lg:col-span-1 items-center justify-center">
+            <svg class="w-full h-6" viewBox="0 0 80 24" fill="none">
+              <path id="flow-path-in" d="M2 12 H78" stroke="currentColor" stroke-width="2" class="svg-flow-line text-stone-300 dark:text-zinc-700" />
+            </svg>
+          </div>
+
+          <!-- Main Processor Node -->
+          <div id="diag-proc" class="lg:col-span-3 interactive-card rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 p-3.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400">Dual Engine</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800">JSON Schema</span>
+            </div>
+            <div class="text-xs font-semibold mt-1">Gemini Proof Audit + Cutoff Rules</div>
+            <div class="text-[11px] text-stone-500 dark:text-zinc-400">Checks project evidence &amp; CGPA/branch/backlogs</div>
+          </div>
+
+          <!-- Branching Connector SVG -->
+          <div class="hidden lg:flex lg:col-span-1 items-center justify-center">
+            <svg class="w-full h-36" viewBox="0 0 80 144" fill="none">
+              <path id="flow-path-1" d="M2 72 C36 72, 40 22, 78 22" stroke="currentColor" stroke-width="2" class="svg-flow-line text-emerald-400/70" />
+              <path id="flow-path-2" d="M2 72 H78" stroke="currentColor" stroke-width="2" class="svg-flow-line text-amber-400/70" />
+              <path id="flow-path-3" d="M2 72 C36 72, 40 122, 78 122" stroke="currentColor" stroke-width="2" class="svg-flow-line text-sky-400/70" />
+            </svg>
+          </div>
+
+          <!-- 3 Clickable Output Lanes -->
+          <div class="lg:col-span-4 space-y-2">
+            <button onclick="setFilter('SHORTLISTED')" id="lane-SHORTLISTED"
+              class="interactive-btn w-full text-left px-3.5 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900/70 bg-emerald-50/60 dark:bg-emerald-950/30 flex items-center justify-between gap-2 cursor-pointer hover:border-emerald-400">
+              <div>
+                <div class="text-xs font-semibold text-emerald-800 dark:text-emerald-300">Lane 1 · Auto-Shortlisted</div>
+                <div class="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">Ready for HR CSV packet</div>
+              </div>
+              <span id="lane-count-SHORTLISTED" class="text-sm font-mono font-bold text-emerald-700 dark:text-emerald-300 tabular-nums">0</span>
+            </button>
+
+            <button onclick="setFilter('UPSKILL_TRACK')" id="lane-UPSKILL_TRACK"
+              class="interactive-btn w-full text-left px-3.5 py-2.5 rounded-xl border border-amber-200 dark:border-amber-900/70 bg-amber-50/60 dark:bg-amber-950/30 flex items-center justify-between gap-2 cursor-pointer hover:border-amber-400">
+              <div>
+                <div class="text-xs font-semibold text-amber-800 dark:text-amber-300">Lane 2 · Skill-Gap &amp; Buzzword Track</div>
+                <div class="text-[11px] text-amber-700/80 dark:text-amber-400/80">Assigned 7-day proof roadmap</div>
+              </div>
+              <span id="lane-count-UPSKILL_TRACK" class="text-sm font-mono font-bold text-amber-700 dark:text-amber-300 tabular-nums">0</span>
+            </button>
+
+            <button onclick="setFilter('REROUTED')" id="lane-REROUTED"
+              class="interactive-btn w-full text-left px-3.5 py-2.5 rounded-xl border border-sky-200 dark:border-sky-900/70 bg-sky-50/60 dark:bg-sky-950/30 flex items-center justify-between gap-2 cursor-pointer hover:border-sky-400">
+              <div>
+                <div class="text-xs font-semibold text-sky-800 dark:text-sky-300">Lane 3 · Cross-JD Auto-Reroute</div>
+                <div class="text-[11px] text-sky-700/80 dark:text-sky-400/80">Matched to eligible open drives</div>
+              </div>
+              <span id="lane-count-REROUTED" class="text-sm font-mono font-bold text-sky-700 dark:text-sky-300 tabular-nums">0</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main 2-Column Workspace -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- Left Control Panel -->
+        <aside class="lg:col-span-4 space-y-4">
+
+          <!-- Target JD Picker -->
+          <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400">
+                1. Pick Company JD
+              </span>
+              <button onclick="openJDModal()"
+                class="interactive-btn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 hover:border-blue-500 cursor-pointer">
+                <span>+ Add Custom JD</span>
+              </button>
+            </div>
+            <div id="jd-list" class="space-y-2"></div>
+          </div>
+
+          <!-- Resume Batch Upload & Run Controls -->
+          <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400">
+                2. Upload Student PDFs
+              </span>
+              <button onclick="clearQueue()" id="clear-queue-btn"
+                class="interactive-btn text-xs font-medium text-stone-500 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer hidden">
+                Clear All
+              </button>
+            </div>
+
+            <label id="dropzone"
+              class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 p-4 text-center cursor-pointer hover:border-blue-500 transition">
+              <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 mb-1.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+              </svg>
+              <span class="text-xs font-semibold">Drop Student Resumes (.pdf)</span>
+              <span class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">or click to browse multiple files</span>
+              <input id="pdf-file-input" type="file" accept=".pdf" multiple class="hidden" onchange="handleFileInput(this.files)" />
+            </label>
+
+            <button onclick="loadDemoPDFs()" id="load-demo-btn"
+              class="interactive-btn w-full py-2.5 px-3 rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/70 hover:bg-stone-100 dark:hover:bg-zinc-800 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer">
+              <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z"/></svg>
+              <span>Load 4 Sample RIT PDFs</span>
+            </button>
+
+            <div id="queued-files-list" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
+
+            <button onclick="runBatchPipeline()" id="run-pipeline-btn"
+              class="interactive-btn w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+              <svg id="run-icon" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v11.78a1.5 1.5 0 0 0 2.3 1.27l9.344-5.891a1.5 1.5 0 0 0 0-2.538L6.3 2.841Z"/></svg>
+              <span id="run-btn-label">Verify &amp; Route Batch</span>
+            </button>
+          </div>
+
+          <!-- Pipeline Execution Log -->
+          <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400">
+                Live Audit Log
+              </span>
+              <button onclick="document.getElementById('exec-log').innerHTML=''" class="text-[11px] text-stone-400 hover:text-stone-700 dark:hover:text-zinc-200 cursor-pointer">
+                Clear
+              </button>
+            </div>
+            <div id="exec-log" class="space-y-1.5 text-[11px] font-mono text-stone-600 dark:text-zinc-400 max-h-44 overflow-y-auto">
+              <div>[ready] Server online. Click "Load 4 Sample RIT PDFs" to begin.</div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Right Results Table -->
+        <div class="lg:col-span-8 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 class="text-sm font-semibold">Auto-Routed Candidates</h2>
+              <p class="text-xs text-stone-500 dark:text-zinc-400">
+                Click any row to inspect project proof vs. buzzword claims.
+              </p>
+            </div>
+
+            <!-- Search + Interactive Filter Pills -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <input id="search-input" oninput="renderResults()" type="text" placeholder="Search student or skill..."
+                class="rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500" />
+              <div class="flex items-center gap-1 flex-wrap">
+                <button onclick="setFilter('ALL')" data-pill="ALL" class="filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-zinc-900 dark:bg-white text-white dark:text-zinc-900">All (<span id="pill-count-ALL">0</span>)</button>
+                <button onclick="setFilter('SHORTLISTED')" data-pill="SHORTLISTED" class="filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-300">Shortlisted</button>
+                <button onclick="setFilter('UPSKILL_TRACK')" data-pill="UPSKILL_TRACK" class="filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-300">Upskill</button>
+                <button onclick="setFilter('REROUTED')" data-pill="REROUTED" class="filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-300">Rerouted</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="empty-results-state" class="rounded-xl border border-dashed border-stone-300 dark:border-zinc-700 p-8 text-center space-y-3">
+            <div class="text-sm font-semibold">Ready to verify your first batch</div>
+            <p class="text-xs text-stone-500 dark:text-zinc-400 max-w-md mx-auto">
+              Start in 2 clicks: load the 4 realistic RIT student PDFs, then hit <strong>Verify &amp; Route Batch</strong>.
+            </p>
+            <div class="flex items-center justify-center gap-2 flex-wrap">
+              <button onclick="loadDemoPDFs()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 text-xs font-semibold cursor-pointer">
+                1. Load 4 RIT PDFs
+              </button>
+              <button onclick="runBatchPipeline()" class="interactive-btn px-3.5 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold cursor-pointer">
+                2. Verify &amp; Route Batch
+              </button>
+            </div>
+          </div>
+
+          <div id="results-table-wrap" class="overflow-x-auto hidden">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-stone-200 dark:border-zinc-800 text-stone-500 dark:text-zinc-400">
+                  <th class="py-2.5 pr-3 font-medium">Student</th>
+                  <th class="py-2.5 px-2 font-medium">Academics</th>
+                  <th class="py-2.5 px-2 font-medium">Skill Proof</th>
+                  <th class="py-2.5 px-2 font-medium">Auto-Route</th>
+                  <th class="py-2.5 pl-2 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="candidates-tbody" class="divide-y divide-stone-200 dark:divide-zinc-800"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: HR EXPORT & EMAILS ==================== -->
+    <section id="tab-actions" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 space-y-4">
+          <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4">
+            <div>
+              <h2 class="text-sm font-semibold">Placement Coordinator Exports</h2>
+              <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">
+                Clean recruiter spreadsheets and audit logs ready for company HR teams.
+              </p>
+            </div>
+
+            <div class="interactive-card p-4 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div class="text-xs font-semibold">HR Shortlist Packet (.CSV)</div>
+                <div id="csv-count-sub" class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">0 verified shortlisted candidates</div>
+              </div>
+              <button onclick="downloadShortlistCSV()"
+                class="interactive-btn px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer">
+                Download CSV
+              </button>
+            </div>
+
+            <div class="interactive-card p-4 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div class="text-xs font-semibold">Full Batch Audit Log (.JSON)</div>
+                <div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">Includes Gemini proofs, flags &amp; routing verdicts</div>
+              </div>
+              <button onclick="downloadAuditJSON()"
+                class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-semibold cursor-pointer">
+                Download JSON
+              </button>
+            </div>
+
+            <div class="interactive-card p-4 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div class="text-xs font-semibold">Shortlisted Email List</div>
+                <div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">Copy verified addresses for BCC</div>
+              </div>
+              <button onclick="copyShortlistedEmails()"
+                class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-semibold cursor-pointer">
+                Copy Emails
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4">
+          <div>
+            <h2 class="text-sm font-semibold">Auto-Generated Student Notifications</h2>
+            <p class="text-xs text-stone-500 dark:text-zinc-400">Copy any message or open directly in your Mac Mail app.</p>
+          </div>
+          <div id="email-queue" class="space-y-3 max-h-[460px] overflow-y-auto">
+            <div class="text-xs text-stone-500 dark:text-zinc-400 py-8 text-center">
+              Run the pipeline in Auto-Router to generate student notifications.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: STUDENT PORTAL VIEW ==================== -->
+    <section id="tab-student" class="hidden space-y-6">
+      <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-5">
+        <div class="space-y-3 border-b border-stone-200 dark:border-zinc-800 pb-4">
+          <div>
+            <h2 class="text-sm font-semibold">Student Portal Experience</h2>
+            <p class="text-xs text-stone-500 dark:text-zinc-400">
+              Select a student pill to preview their personalized placement status, 7-day roadmap, or rerouted drive.
+            </p>
+          </div>
+          <div id="student-pills" class="flex flex-wrap gap-2">
+            <span class="text-xs text-stone-400">No students evaluated yet.</span>
+          </div>
+        </div>
+
+        <div id="student-portal-body">
+          <div class="text-xs text-stone-500 dark:text-zinc-400 py-8 text-center">
+            Process at least one resume in Auto-Router to preview the Student Portal.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== SLIDE-OVER CANDIDATE DOSSIER DRAWER ==================== -->
+  <div id="drawer-backdrop" onclick="closeDrawer()" class="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] hidden"></div>
+  <aside id="dossier-drawer"
+    class="drawer-enter fixed top-0 right-0 z-50 h-full w-full max-w-2xl bg-white dark:bg-zinc-950 border-l border-stone-200 dark:border-zinc-800 shadow-2xl translate-x-full flex flex-col">
+    <div class="px-5 py-4 border-b border-stone-200 dark:border-zinc-800 flex items-center justify-between gap-3">
+      <div class="min-w-0">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-stone-400">Verification Dossier</div>
+        <h3 id="drawer-title" class="text-base font-semibold truncate">Candidate Name</h3>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button onclick="stepDrawer(-1)" class="interactive-btn px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-800 text-xs hover:bg-stone-100 dark:hover:bg-zinc-900 cursor-pointer">← Prev</button>
+        <button onclick="stepDrawer(1)" class="interactive-btn px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-800 text-xs hover:bg-stone-100 dark:hover:bg-zinc-900 cursor-pointer">Next →</button>
+        <button onclick="closeDrawer()" class="interactive-btn ml-1 p-1.5 rounded-lg border border-stone-200 dark:border-zinc-800 hover:bg-stone-100 dark:hover:bg-zinc-900 cursor-pointer" title="Close (Esc)">✕</button>
+      </div>
+    </div>
+    <div id="drawer-content" class="flex-1 overflow-y-auto p-5 space-y-5 text-xs"></div>
+  </aside>
+
+  <!-- ==================== GEMINI API KEY MODAL ==================== -->
+  <div id="key-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold">Configure Gemini API Key</h3>
+        <button onclick="closeKeyModal()" class="text-stone-400 hover:text-stone-700 dark:hover:text-zinc-200 cursor-pointer">✕</button>
+      </div>
+      <p class="text-xs text-stone-500 dark:text-zinc-400">
+        Stored locally in <code class="font-mono">.env</code> on your Mac and used only by your Python backend.
+      </p>
+      <input id="api-key-input" type="password" placeholder="AIzaSy..."
+        class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-600" />
+      <div class="flex justify-end gap-2">
+        <button onclick="closeKeyModal()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 text-xs font-medium cursor-pointer">Cancel</button>
+        <button onclick="saveApiKey()" class="interactive-btn px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold cursor-pointer">Save Key</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ADD CUSTOM JD MODAL ==================== -->
+  <div id="jd-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-3 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold">Add Custom Company JD</h3>
+        <button onclick="closeJDModal()" class="text-stone-400 hover:text-stone-700 dark:hover:text-zinc-200 cursor-pointer">✕</button>
+      </div>
+      <div class="space-y-2.5 text-xs">
+        <div>
+          <label class="block font-medium mb-1">Company Name</label>
+          <input id="jd-company" type="text" placeholder="e.g., Razorpay" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-medium mb-1">Role Title</label>
+            <input id="jd-role" type="text" placeholder="Backend Intern" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
+          </div>
+          <div>
+            <label class="block font-medium mb-1">CTC / Stipend</label>
+            <input id="jd-ctc" type="text" placeholder="10 LPA" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-medium mb-1">Min CGPA</label>
+            <input id="jd-cgpa" type="number" step="0.1" value="7.5" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
+          </div>
+          <div>
+            <label class="block font-medium mb-1">Max Backlogs</label>
+            <input id="jd-backlogs" type="number" value="0" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
+          </div>
+        </div>
+        <div>
+          <label class="block font-medium mb-1">Allowed Branches (comma-separated)</label>
+          <input id="jd-branches" type="text" value="CSE, ISE, AIML" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
+        </div>
+        <div>
+          <label class="block font-medium mb-1">Must-Have Skills (comma-separated)</label>
+          <input id="jd-skills" type="text" value="Python, SQL, REST APIs, Git" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeJDModal()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 text-xs font-medium cursor-pointer">Cancel</button>
+        <button onclick="saveCustomJD()" class="interactive-btn px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold cursor-pointer">Save JD</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-wrap" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <script>
+    const KEYWORD_COPY = {
+      pdf: '<strong class="text-blue-600 dark:text-blue-400">Multimodal PDF Audit:</strong> Sends raw multi-column resume PDFs directly to Gemini — no broken text scraping.',
+      proof: '<strong class="text-blue-600 dark:text-blue-400">Buzzword Detector:</strong> Flags skills listed in headers that have zero supporting projects or internship evidence.',
+      rules: '<strong class="text-blue-600 dark:text-blue-400">Deterministic Cutoffs:</strong> Strict Python code verifies CGPA, branch, and backlogs so AI never guesses eligibility math.',
+      reroute: '<strong class="text-blue-600 dark:text-blue-400">Cross-JD Auto-Router:</strong> Automatically routes ineligible candidates to other open campus drives where they qualify.'
+    };
+
+    const state = {
+      jds: [],
+      activeJdId: "cloud",
+      queuedFiles: [],
+      results: [],
+      filter: "ALL",
+      drawerId: null,
+      portalId: null,
+      isRunning: false,
+      appliedAlt: {}
+    };
+
+    async function init() {
+      applySavedTheme();
+      await Promise.all([checkHealth(), loadJDs()]);
+      setupDropzone();
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeDrawer();
+      });
+    }
+
+    function applySavedTheme() {
+      const saved = localStorage.getItem("placeflow_theme") || "light";
+      const html = document.documentElement;
+      html.classList.remove("light", "dark");
+      html.classList.add(saved);
+      document.getElementById("theme-label").textContent = saved === "dark" ? "Light" : "Dark";
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.classList.contains("dark") ? "light" : "dark";
+      html.classList.remove("light", "dark");
+      html.classList.add(next);
+      localStorage.setItem("placeflow_theme", next);
+      document.getElementById("theme-label").textContent = next === "dark" ? "Light" : "Dark";
+    }
+
+    function selectKeyword(kw) {
+      document.getElementById("kw-text").innerHTML = KEYWORD_COPY[kw] || "";
+      document.querySelectorAll(".kw-pill").forEach(btn => {
+        const active = btn.dataset.kw === kw;
+        btn.className = `kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer ${
+          active
+            ? "border-blue-500 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300"
+            : "border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-stone-700 dark:text-zinc-300"
+        }`;
+      });
+    }
+
+    async function checkHealth() {
+      try {
+        const res = await fetch("/api/health");
+        const data = await res.json();
+        const pill = document.getElementById("api-key-pill");
+        const dot = document.getElementById("api-key-dot");
+        const label = document.getElementById("api-key-label");
+        if (data.hasApiKey) {
+          pill.className = "interactive-btn inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border cursor-pointer bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300";
+          dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+          label.textContent = `Gemini Ready (${data.maskedKey})`;
+        }
+        return data.hasApiKey;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function loadJDs() {
+      const res = await fetch("/api/jds");
+      const data = await res.json();
+      state.jds = data.jds || [];
+      if (state.jds.length) state.activeJdId = state.jds[0].id;
+      renderJDs();
+    }
+
+    function renderJDs() {
+      const el = document.getElementById("jd-list");
+      el.innerHTML = state.jds.map(jd => {
+        const active = jd.id === state.activeJdId;
+        return `
+          <button onclick="selectJD('${jd.id}')"
+            class="interactive-btn w-full text-left p-3 rounded-xl border cursor-pointer ${
+              active
+                ? "border-blue-600 dark:border-blue-500 bg-blue-50/40 dark:bg-blue-950/20 ring-1 ring-blue-600 dark:ring-blue-500"
+                : "border-stone-200 dark:border-zinc-800 hover:border-stone-400 dark:hover:border-zinc-600"
+            }">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-semibold truncate">${escapeHtml(jd.company)}</span>
+              <span class="text-[11px] font-mono text-stone-500 dark:text-zinc-400 shrink-0">${escapeHtml(jd.ctc || "")}</span>
+            </div>
+            <div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">${escapeHtml(jd.role)}</div>
+            <div class="flex flex-wrap gap-1.5 mt-2 text-[10px] font-mono">
+              <span class="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-zinc-800">CGPA ≥ ${jd.minCgpa}</span>
+              <span class="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-zinc-800">${jd.allowedBranches.join("/")}</span>
+              <span class="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-zinc-800">Backlogs ≤ ${jd.maxBacklogs}</span>
+            </div>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function selectJD(id) {
+      state.activeJdId = id;
+      renderJDs();
+      const jd = state.jds.find(j => j.id === id);
+      toast(`Target JD set to ${jd.company}`);
+    }
+
+    function setupDropzone() {
+      const dz = document.getElementById("dropzone");
+      dz.addEventListener("dragover", (e) => { e.preventDefault(); dz.classList.add("border-blue-600"); });
+      dz.addEventListener("dragleave", () => dz.classList.remove("border-blue-600"));
+      dz.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dz.classList.remove("border-blue-600");
+        if (e.dataTransfer.files?.length) handleFileInput(e.dataTransfer.files);
+      });
+    }
+
+    function handleFileInput(fileList) {
+      const files = Array.from(fileList).filter(f => f.name.toLowerCase().endsWith(".pdf"));
+      if (!files.length) {
+        toast("Please upload .pdf resume files.", "error");
+        return;
+      }
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const b64 = String(reader.result).split(",")[1] || "";
+          state.queuedFiles.push({
+            id: "f_" + Math.random().toString(36).slice(2, 9),
+            fileName: file.name,
+            sizeBytes: file.size,
+            pdfBase64: b64
+          });
+          renderQueue();
+        };
+        reader.readAsDataURL(file);
+      });
+      toast(`Queued ${files.length} PDF resume(s)`);
+    }
+
+    async function loadDemoPDFs() {
+      const btn = document.getElementById("load-demo-btn");
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/demo-resumes");
+        const data = await res.json();
+        state.queuedFiles = (data.files || []).map((f, idx) => ({
+          id: "demo_" + idx + "_" + Date.now(),
+          fileName: f.fileName,
+          sizeBytes: f.sizeBytes,
+          pdfBase64: f.pdfBase64
+        }));
+        renderQueue();
+        addLog(`[queue] Loaded ${state.queuedFiles.length} real RIT sample PDFs.`);
+        toast(`Loaded ${state.queuedFiles.length} RIT sample PDFs`);
+      } catch (err) {
+        toast("Failed to load sample PDFs", "error");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function removeQueuedFile(id) {
+      state.queuedFiles = state.queuedFiles.filter(f => f.id !== id);
+      renderQueue();
+    }
+
+    function clearQueue() {
+      state.queuedFiles = [];
+      renderQueue();
+    }
+
+    function renderQueue() {
+      const el = document.getElementById("queued-files-list");
+      const clearBtn = document.getElementById("clear-queue-btn");
+      document.getElementById("diag-queue-count").textContent = `${state.queuedFiles.length} PDFs`;
+      clearBtn.classList.toggle("hidden", state.queuedFiles.length === 0);
+      if (!state.queuedFiles.length) {
+        el.innerHTML = "";
+        return;
+      }
+      el.innerHTML = state.queuedFiles.map(f => `
+        <div class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 text-[11px]">
+          <span class="truncate font-medium">${escapeHtml(f.fileName)}</span>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="font-mono text-stone-400">${Math.round(f.sizeBytes / 1024)}KB</span>
+            <button onclick="removeQueuedFile('${f.id}')" class="text-stone-400 hover:text-rose-500 cursor-pointer" title="Remove">✕</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function setDiagramActive(running, statusMsg) {
+      document.getElementById("pipeline-status-text").textContent = `Status: ${statusMsg}`;
+      ["flow-path-in", "flow-path-1", "flow-path-2", "flow-path-3"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle("svg-flow-active", running);
+      });
+      const proc = document.getElementById("diag-proc");
+      proc.classList.toggle("border-blue-500", running);
+      proc.classList.toggle("ring-1", running);
+      proc.classList.toggle("ring-blue-500", running);
+    }
+
+    async function runBatchPipeline() {
+      const hasKey = await checkHealth();
+      if (!hasKey) {
+        openKeyModal();
+        toast("Enter your Gemini API key first", "error");
+        return;
+      }
+      if (!state.queuedFiles.length) {
+        toast("Load the 4 RIT PDFs or upload a PDF first.", "error");
+        return;
+      }
+      if (state.isRunning) return;
+
+      state.isRunning = true;
+      state.results = [];
+      renderResults();
+
+      const btn = document.getElementById("run-pipeline-btn");
+      const btnLabel = document.getElementById("run-btn-label");
+      btn.disabled = true;
+
+      const jd = state.jds.find(j => j.id === state.activeJdId);
+      addLog(`[start] Evaluating ${state.queuedFiles.length} PDF(s) for ${jd.company}...`);
+      setDiagramActive(true, `Processing ${state.queuedFiles.length} resume(s)...`);
+
+      for (let i = 0; i < state.queuedFiles.length; i++) {
+        const file = state.queuedFiles[i];
+        btnLabel.textContent = `Verifying ${i + 1} of ${state.queuedFiles.length}...`;
+        setDiagramActive(true, `Auditing ${file.fileName} (${i + 1}/${state.queuedFiles.length})`);
+
+        const result = await verifySingleFile(file, jd);
+        state.results.push(result);
+        renderResults();
+
+        if (i < state.queuedFiles.length - 1) {
+          await new Promise(r => setTimeout(r, 350));
+        }
+      }
+
+      setDiagramActive(false, `Completed (${state.results.length} routed)`);
+      btn.disabled = false;
+      btnLabel.textContent = "Verify & Route Batch";
+      state.isRunning = false;
+      toast("Batch verification & auto-routing complete!");
+    }
+
+    async function verifySingleFile(file, jd) {
+      try {
+        const res = await fetch("/api/verify-resume", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileName: file.fileName,
+            pdfBase64: file.pdfBase64,
+            jd,
+            allJds: state.jds
+          })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || `HTTP ${res.status}`);
+        }
+        addLog(`[ok] ${data.extracted.student_name} -> ${data.routing.routeLabel} (${data.meta.modelUsed}, ${data.meta.durationMs}ms)`);
+        return {
+          id: file.id,
+          fileName: file.fileName,
+          pdfBase64: file.pdfBase64,
+          status: "ok",
+          extracted: data.extracted,
+          routing: data.routing,
+          meta: data.meta,
+          checkedDays: {}
+        };
+      } catch (err) {
+        addLog(`[err] ${file.fileName}: ${err.message}`);
+        return {
+          id: file.id,
+          fileName: file.fileName,
+          pdfBase64: file.pdfBase64,
+          status: "error",
+          error: err.message,
+          checkedDays: {}
+        };
+      }
+    }
+
+    async function retrySingle(id) {
+      const idx = state.results.findIndex(r => r.id === id);
+      if (idx === -1) return;
+      const item = state.results[idx];
+      const jd = state.jds.find(j => j.id === state.activeJdId);
+      toast(`Retrying ${item.fileName}...`);
+      const updated = await verifySingleFile(item, jd);
+      state.results[idx] = updated;
+      renderResults();
+    }
+
+    function setFilter(filter) {
+      state.filter = filter;
+      ["SHORTLISTED", "UPSKILL_TRACK", "REROUTED"].forEach(k => {
+        const lane = document.getElementById(`lane-${k}`);
+        if (lane) {
+          lane.classList.toggle("ring-2", k === filter);
+          lane.classList.toggle("ring-blue-600", k === filter);
+        }
+      });
+      document.querySelectorAll(".filter-pill").forEach(p => {
+        const active = p.dataset.pill === filter;
+        p.className = `filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer ${
+          active
+            ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
+            : "border border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-300"
+        }`;
+      });
+      renderResults();
+    }
+
+    function routePill(routing) {
+      if (routing.route === "SHORTLISTED") {
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">✓ ${escapeHtml(routing.routeLabel)}</span>`;
+      }
+      if (routing.route === "UPSKILL_TRACK") {
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">⚡ ${escapeHtml(routing.routeLabel)}</span>`;
+      }
+      if (routing.altMatches?.length) {
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">↪ ${escapeHtml(routing.routeLabel)}</span>`;
+      }
+      return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">✕ ${escapeHtml(routing.routeLabel)}</span>`;
+    }
+
+    function renderResults() {
+      const okItems = state.results.filter(r => r.status === "ok");
+      const shortlisted = okItems.filter(r => r.routing.route === "SHORTLISTED").length;
+      const upskill = okItems.filter(r => r.routing.route === "UPSKILL_TRACK").length;
+      const rerouted = okItems.filter(r => r.routing.route === "REROUTED").length;
+
+      document.getElementById("lane-count-SHORTLISTED").textContent = shortlisted;
+      document.getElementById("lane-count-UPSKILL_TRACK").textContent = upskill;
+      document.getElementById("lane-count-REROUTED").textContent = rerouted;
+      document.getElementById("pill-count-ALL").textContent = state.results.length;
+      document.getElementById("badge-processed-count").textContent = state.results.length;
+      document.getElementById("csv-count-sub").textContent = `${shortlisted} verified shortlisted candidate(s)`;
+
+      const hasAny = state.results.length > 0;
+      document.getElementById("empty-results-state").classList.toggle("hidden", hasAny);
+      document.getElementById("results-table-wrap").classList.toggle("hidden", !hasAny);
+
+      const query = (document.getElementById("search-input")?.value || "").trim().toLowerCase();
+      const filtered = state.results.filter(r => {
+        if (state.filter !== "ALL" && !(r.status === "ok" && r.routing.route === state.filter)) return false;
+        if (!query) return true;
+        if (r.status !== "ok") return r.fileName.toLowerCase().includes(query);
+        const hay = [
+          r.extracted.student_name,
+          r.routing.normalizedBranch,
+          ...r.extracted.verified_skills.map(v => v.skill),
+          ...(r.extracted.unverified_claims || []).map(u => u.skill)
+        ].join(" ").toLowerCase();
+        return hay.includes(query);
+      });
+
+      const tbody = document.getElementById("candidates-tbody");
+      tbody.innerHTML = filtered.map(item => {
+        if (item.status === "error") {
+          return `
+            <tr class="bg-rose-50/40 dark:bg-rose-950/20">
+              <td class="py-3 pr-3 font-medium">${escapeHtml(item.fileName)}</td>
+              <td colspan="3" class="py-3 px-2 text-rose-600 dark:text-rose-400">${escapeHtml(item.error)}</td>
+              <td class="py-3 pl-2 text-right">
+                <button onclick="retrySingle('${item.id}')" class="interactive-btn px-2.5 py-1 rounded-lg bg-rose-600 text-white text-xs font-medium cursor-pointer">Retry</button>
+              </td>
+            </tr>
+          `;
+        }
+        const ex = item.extracted;
+        const rt = item.routing;
+        const unverifiedCount = ex.unverified_claims?.length || 0;
+        return `
+          <tr onclick="openDrawer('${item.id}')" class="hover:bg-stone-50 dark:hover:bg-zinc-800/50 cursor-pointer transition">
+            <td class="py-3 pr-3">
+              <div class="font-semibold">${escapeHtml(ex.student_name)}</div>
+              <div class="text-[11px] text-stone-500 dark:text-zinc-400">${escapeHtml(ex.email)}</div>
+            </td>
+            <td class="py-3 px-2 font-mono tabular-nums">
+              <div>${escapeHtml(rt.normalizedBranch)} · ${ex.cgpa}</div>
+              <div class="text-[11px] text-stone-500 dark:text-zinc-400">${ex.active_backlogs} backlogs</div>
+            </td>
+            <td class="py-3 px-2 min-w-[140px]">
+              <div class="flex items-center justify-between text-[11px] font-mono mb-1">
+                <span>${rt.matchPct}% fit</span>
+                <span class="text-stone-400">${ex.verified_skills.length} verified</span>
+              </div>
+              <div class="w-full h-1.5 rounded-full bg-stone-200 dark:bg-zinc-800 overflow-hidden">
+                <div class="h-full rounded-full ${rt.matchPct >= 75 ? "bg-emerald-500" : "bg-amber-500"}" style="width: ${rt.matchPct}%"></div>
+              </div>
+              ${unverifiedCount > 0 ? `<div class="text-[11px] text-rose-600 dark:text-rose-400 mt-1 font-medium">${unverifiedCount} unverified buzzword(s)</div>` : ""}
+            </td>
+            <td class="py-3 px-2">
+              ${routePill(rt)}
+              ${rt.altMatches?.length ? `<div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-1">→ ${escapeHtml(rt.altMatches[0].company)}</div>` : ""}
+            </td>
+            <td class="py-3 pl-2 text-right">
+              <button onclick="event.stopPropagation(); openDrawer('${item.id}')"
+                class="interactive-btn px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 hover:border-blue-600 text-xs font-medium cursor-pointer">
+                Inspect →
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      renderEmailQueue(okItems);
+      renderPortalPills(okItems);
+    }
+
+    function openDrawer(id) {
+      state.drawerId = id;
+      const item = state.results.find(r => r.id === id);
+      if (!item || item.status !== "ok") return;
+
+      document.getElementById("drawer-title").textContent = item.extracted.student_name;
+      renderDrawerBody(item);
+
+      document.getElementById("drawer-backdrop").classList.remove("hidden");
+      document.getElementById("dossier-drawer").classList.remove("translate-x-full");
+    }
+
+    function closeDrawer() {
+      document.getElementById("drawer-backdrop").classList.add("hidden");
+      document.getElementById("dossier-drawer").classList.add("translate-x-full");
+    }
+
+    function stepDrawer(delta) {
+      const okItems = state.results.filter(r => r.status === "ok");
+      if (!okItems.length) return;
+      const idx = okItems.findIndex(r => r.id === state.drawerId);
+      const next = okItems[(idx + delta + okItems.length) % okItems.length];
+      openDrawer(next.id);
+    }
+
+    function toggleDayTask(itemId, dayIdx) {
+      const item = state.results.find(r => r.id === itemId);
+      if (!item) return;
+      item.checkedDays[dayIdx] = !item.checkedDays[dayIdx];
+      renderDrawerBody(item);
+      if (state.portalId === itemId) renderStudentPortalBody();
+    }
+
+    function renderDrawerBody(item) {
+      const ex = item.extracted;
+      const rt = item.routing;
+      const rawJson = JSON.stringify({ extracted: ex, routing: rt, meta: item.meta }, null, 2);
+
+      document.getElementById("drawer-content").innerHTML = `
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <div class="text-stone-500 dark:text-zinc-400">
+            ${escapeHtml(ex.email)} · Model: <span class="font-mono">${escapeHtml(item.meta.modelUsed)}</span> (${item.meta.durationMs}ms)
+          </div>
+          ${routePill(rt)}
+        </div>
+
+        <div class="p-3.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900">
+          <div class="font-semibold mb-1">Auto-Router Verdict</div>
+          <p class="text-stone-600 dark:text-zinc-300">${escapeHtml(rt.verdictReason)}</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2.5">
+          <div class="p-3 rounded-xl border ${rt.passesCgpa ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20" : "border-rose-200 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20"}">
+            <div class="font-semibold">${rt.passesCgpa ? "✓" : "✕"} CGPA</div>
+            <div class="font-mono mt-0.5">${ex.cgpa}</div>
+          </div>
+          <div class="p-3 rounded-xl border ${rt.passesBranch ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20" : "border-rose-200 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20"}">
+            <div class="font-semibold">${rt.passesBranch ? "✓" : "✕"} Branch</div>
+            <div class="font-mono mt-0.5">${escapeHtml(rt.normalizedBranch)}</div>
+          </div>
+          <div class="p-3 rounded-xl border ${rt.passesBacklogs ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20" : "border-rose-200 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20"}">
+            <div class="font-semibold">${rt.passesBacklogs ? "✓" : "✕"} Backlogs</div>
+            <div class="font-mono mt-0.5">${ex.active_backlogs}</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <div class="font-semibold text-emerald-700 dark:text-emerald-400">Verified Skills (With Proof)</div>
+            ${ex.verified_skills.map(v => `
+              <div class="p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900">
+                <div class="font-semibold">${escapeHtml(v.skill)}</div>
+                <div class="text-stone-500 dark:text-zinc-400 mt-0.5">${escapeHtml(v.evidence_source)}</div>
+              </div>
+            `).join("") || `<div class="text-stone-400">None verified.</div>`}
+          </div>
+
+          <div class="space-y-2">
+            <div class="font-semibold text-rose-700 dark:text-rose-400">Unverified Claims &amp; Gaps</div>
+            ${(ex.unverified_claims || []).map(u => `
+              <div class="p-2.5 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20">
+                <div class="font-semibold text-rose-700 dark:text-rose-300">${escapeHtml(u.skill)} (Flagged)</div>
+                <div class="text-stone-600 dark:text-zinc-400 mt-0.5">${escapeHtml(u.reason)}</div>
+              </div>
+            `).join("") || `<div class="p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 text-stone-500">0 unverified buzzwords.</div>`}
+            ${rt.missingMustHave.length ? `
+              <div class="p-2.5 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+                <span class="font-semibold text-amber-800 dark:text-amber-300">Missing Must-Have:</span>
+                <span> ${escapeHtml(rt.missingMustHave.join(", "))}</span>
+              </div>
+            ` : ""}
+          </div>
+        </div>
+
+        ${ex.upskilling_plan_7_days?.length ? `
+          <div class="space-y-2">
+            <div class="font-semibold">Interactive 7-Day Upskilling Checklist</div>
+            <div class="space-y-2">
+              ${ex.upskilling_plan_7_days.map((step, i) => {
+                const checked = !!item.checkedDays[i];
+                return `
+                  <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900 cursor-pointer">
+                    <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleDayTask('${item.id}', ${i})" class="mt-0.5 accent-blue-600" />
+                    <div class="${checked ? "line-through opacity-60" : ""}">
+                      <div class="font-semibold">${escapeHtml(step.day)} · ${escapeHtml(step.focus_topic)}</div>
+                      <div class="text-stone-500 dark:text-zinc-400">${escapeHtml(step.mini_task)}</div>
+                    </div>
+                  </label>
+                `;
+              }).join("")}
+            </div>
+          </div>
+        ` : ""}
+
+        <div class="space-y-2 pt-2 border-t border-stone-200 dark:border-zinc-800">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <button onclick="document.getElementById('raw-json-pre').classList.toggle('hidden')"
+              class="interactive-btn px-3 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 font-medium cursor-pointer hover:bg-stone-100 dark:hover:bg-zinc-800">
+              { } Toggle Raw Gemini JSON
+            </button>
+            <div class="flex gap-2">
+              <button onclick="copyText(${JSON.stringify(rawJson)}, 'Copied Gemini JSON')"
+                class="interactive-btn px-3 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 font-medium cursor-pointer hover:bg-stone-100 dark:hover:bg-zinc-800">
+                Copy JSON
+              </button>
+              <button onclick="closeDrawer(); openPortalFor('${item.id}')"
+                class="interactive-btn px-3 py-1.5 rounded-lg bg-blue-600 text-white font-medium cursor-pointer">
+                Student Portal View →
+              </button>
+            </div>
+          </div>
+          <pre id="raw-json-pre" class="hidden p-3 rounded-xl bg-zinc-900 text-zinc-100 text-[11px] font-mono overflow-x-auto max-h-64">${escapeHtml(rawJson)}</pre>
+        </div>
+      `;
+    }
+
+    function renderEmailQueue(okItems) {
+      const el = document.getElementById("email-queue");
+      if (!okItems.length) {
+        el.innerHTML = `<div class="text-xs text-stone-500 dark:text-zinc-400 py-8 text-center">Run the pipeline in Auto-Router to generate student notifications.</div>`;
+        return;
+      }
+      const jd = state.jds.find(j => j.id === state.activeJdId);
+      el.innerHTML = okItems.map(item => {
+        const ex = item.extracted;
+        const rt = item.routing;
+        const subject = `[Placement Cell] ${jd.company} — ${rt.routeLabel}`;
+        const body = ex.drafted_notification || rt.verdictReason;
+        const mailto = `mailto:${encodeURIComponent(ex.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        return `
+          <div class="interactive-card p-3.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 text-xs space-y-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="font-semibold">${escapeHtml(ex.student_name)} <span class="font-normal text-stone-500">&lt;${escapeHtml(ex.email)}&gt;</span></div>
+              ${routePill(rt)}
+            </div>
+            <p class="text-stone-600 dark:text-zinc-300">${escapeHtml(body)}</p>
+            <div class="flex items-center gap-2 pt-1">
+              <button onclick="copyText(${JSON.stringify(body)}, 'Copied email for ${escapeHtml(ex.student_name)}')"
+                class="interactive-btn px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 font-medium cursor-pointer">
+                Copy Message
+              </button>
+              <a href="${mailto}" class="interactive-btn px-2.5 py-1.5 rounded-lg bg-blue-600 text-white font-medium inline-block">
+                Open in Mail App ↗
+              </a>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderPortalPills(okItems) {
+      const wrap = document.getElementById("student-pills");
+      if (!okItems.length) {
+        wrap.innerHTML = `<span class="text-xs text-stone-400">No students evaluated yet.</span>`;
+        return;
+      }
+      if (!state.portalId || !okItems.some(i => i.id === state.portalId)) {
+        state.portalId = okItems[0].id;
+      }
+      wrap.innerHTML = okItems.map(item => {
+        const active = item.id === state.portalId;
+        return `
+          <button onclick="state.portalId='${item.id}'; renderPortalPills(state.results.filter(r=>r.status==='ok')); renderStudentPortalBody();"
+            class="interactive-btn px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer border ${
+              active
+                ? "bg-blue-600 text-white border-blue-600"
+                : "border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 hover:border-blue-400"
+            }">
+            ${escapeHtml(item.extracted.student_name)} (${escapeHtml(item.routing.normalizedBranch)})
+          </button>
+        `;
+      }).join("");
+      renderStudentPortalBody();
+    }
+
+    function openPortalFor(id) {
+      state.portalId = id;
+      switchTab("student");
+      renderPortalPills(state.results.filter(r => r.status === "ok"));
+    }
+
+    function renderStudentPortalBody() {
+      const el = document.getElementById("student-portal-body");
+      const item = state.results.find(r => r.id === state.portalId && r.status === "ok");
+      if (!item) return;
+
+      const ex = item.extracted;
+      const rt = item.routing;
+      const jd = state.jds.find(j => j.id === state.activeJdId);
+
+      let card = "";
+      if (rt.route === "SHORTLISTED") {
+        card = `
+          <div class="p-5 rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2">
+            <div class="text-sm font-semibold text-emerald-700 dark:text-emerald-300">✓ You are Auto-Shortlisted for ${escapeHtml(jd.company)}!</div>
+            <p class="text-xs text-stone-600 dark:text-zinc-300">${escapeHtml(ex.drafted_notification)}</p>
+          </div>
+        `;
+      } else if (rt.route === "UPSKILL_TRACK") {
+        const steps = ex.upskilling_plan_7_days || [];
+        const doneCount = steps.filter((_, idx) => item.checkedDays[idx]).length;
+        const pct = steps.length ? Math.round((doneCount / steps.length) * 100) : 0;
+        card = `
+          <div class="p-5 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20 space-y-4">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <div class="text-sm font-semibold text-amber-800 dark:text-amber-300">⚡ Upskill Track — Action Plan Required</div>
+                <p class="text-xs text-stone-600 dark:text-zinc-300 mt-0.5">${escapeHtml(rt.verdictReason)}</p>
+              </div>
+              <span class="text-xs font-mono font-semibold">${pct}% complete</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              ${steps.map((s, idx) => {
+                const checked = !!item.checkedDays[idx];
+                return `
+                  <label class="interactive-card p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 space-y-1.5 cursor-pointer block">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-semibold">${escapeHtml(s.day)}</span>
+                      <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleDayTask('${item.id}', ${idx})" class="accent-blue-600" />
+                    </div>
+                    <div class="text-xs font-medium">${escapeHtml(s.focus_topic)}</div>
+                    <div class="text-[11px] text-stone-500 dark:text-zinc-400">${escapeHtml(s.mini_task)}</div>
+                  </label>
+                `;
+              }).join("")}
+            </div>
+          </div>
+        `;
+      } else if (rt.altMatches?.length) {
+        const alt = rt.altMatches[0];
+        const applied = !!state.appliedAlt[item.id];
+        card = `
+          <div class="p-5 rounded-2xl border border-sky-200 dark:border-sky-800 bg-sky-50/40 dark:bg-sky-950/20 space-y-3">
+            <div class="text-sm font-semibold text-sky-800 dark:text-sky-300">↪ Auto-Rerouted to Better-Fit Placement Drive</div>
+            <p class="text-xs text-stone-600 dark:text-zinc-300">${escapeHtml(rt.verdictReason)}</p>
+            <div class="p-4 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div class="text-xs font-semibold">${escapeHtml(alt.company)} — ${escapeHtml(alt.role)}</div>
+                <div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">${alt.fitPct}% verified skill match · ${escapeHtml(alt.ctc || "Active Drive")}</div>
+              </div>
+              <button onclick="state.appliedAlt['${item.id}']=true; renderStudentPortalBody(); toast('Confirmed transfer to ${escapeHtml(alt.company)}!')"
+                class="interactive-btn px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer ${
+                  applied
+                    ? "bg-emerald-600 text-white"
+                    : "bg-blue-600 text-white"
+                }">
+                ${applied ? "✓ Drive Confirmed" : "Confirm Auto-Reroute"}
+              </button>
+            </div>
+          </div>
+        `;
+      } else {
+        card = `
+          <div class="p-5 rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20 text-xs">
+            <div class="text-sm font-semibold text-rose-700 dark:text-rose-300">Eligibility Hold</div>
+            <p class="mt-1 text-stone-600 dark:text-zinc-300">${escapeHtml(rt.verdictReason)}</p>
+          </div>
+        `;
+      }
+
+      el.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <div class="text-xs text-stone-500 dark:text-zinc-400">Student Profile</div>
+              <div class="text-base font-semibold">${escapeHtml(ex.student_name)} · ${escapeHtml(rt.normalizedBranch)} (${ex.cgpa} CGPA)</div>
+            </div>
+            ${routePill(rt)}
+          </div>
+          ${card}
+        </div>
+      `;
+    }
+
+    function downloadShortlistCSV() {
+      const okItems = state.results.filter(r => r.status === "ok" && r.routing.route === "SHORTLISTED");
+      if (!okItems.length) {
+        toast("No shortlisted candidates to export yet.", "error");
+        return;
+      }
+      const rows = [["Name", "Email", "Branch", "CGPA", "Backlogs", "Fit %", "Verified Skills", "Project Summary"]];
+      okItems.forEach(item => {
+        const ex = item.extracted;
+        rows.push([
+          ex.student_name,
+          ex.email,
+          item.routing.normalizedBranch,
+          ex.cgpa,
+          ex.active_backlogs,
+          item.routing.matchPct + "%",
+          ex.verified_skills.map(v => v.skill).join("; "),
+          ex.project_summary
+        ]);
+      });
+      const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+      downloadBlob(csv, `${state.activeJdId}_hr_shortlist.csv`, "text/csv");
+      toast("Downloaded HR Shortlist CSV!");
+    }
+
+    function downloadAuditJSON() {
+      if (!state.results.length) {
+        toast("No processed records to export.", "error");
+        return;
+      }
+      const clean = state.results.map(({ fileName, status, extracted, routing, meta, error }) => ({
+        fileName, status, extracted, routing, meta, error
+      }));
+      downloadBlob(JSON.stringify(clean, null, 2), `${state.activeJdId}_audit_report.json`, "application/json");
+      toast("Downloaded Full Audit JSON!");
+    }
+
+    function copyShortlistedEmails() {
+      const emails = state.results
+        .filter(r => r.status === "ok" && r.routing.route === "SHORTLISTED")
+        .map(r => r.extracted.email)
+        .filter(Boolean);
+      if (!emails.length) {
+        toast("No shortlisted emails to copy.", "error");
+        return;
+      }
+      copyText(emails.join(", "), `Copied ${emails.length} shortlisted email(s)!`);
+    }
+
+    function downloadBlob(content, filename, mime) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function switchTab(tab) {
+      ["router", "actions", "student"].forEach(t => {
+        document.getElementById("tab-" + t).classList.toggle("hidden", t !== tab);
+        const btn = document.getElementById("tab-btn-" + t);
+        btn.className = `interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer ${
+          t === tab
+            ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm"
+            : "text-stone-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+        }`;
+      });
+    }
+
+    function openKeyModal() {
+      const m = document.getElementById("key-modal");
+      m.classList.remove("hidden");
+      m.classList.add("flex");
+    }
+    function closeKeyModal() {
+      const m = document.getElementById("key-modal");
+      m.classList.add("hidden");
+      m.classList.remove("flex");
+    }
+    async function saveApiKey() {
+      const key = document.getElementById("api-key-input").value.trim();
+      if (!key) return;
+      const res = await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: key })
+      });
+      if (res.ok) {
+        closeKeyModal();
+        await checkHealth();
+        toast("Gemini API key saved locally!");
+      } else {
+        toast("Failed to save key", "error");
+      }
+    }
+
+    function openJDModal() {
+      const m = document.getElementById("jd-modal");
+      m.classList.remove("hidden");
+      m.classList.add("flex");
+    }
+    function closeJDModal() {
+      const m = document.getElementById("jd-modal");
+      m.classList.add("hidden");
+      m.classList.remove("flex");
+    }
+    function saveCustomJD() {
+      const company = document.getElementById("jd-company").value.trim() || "Custom Company";
+      const role = document.getElementById("jd-role").value.trim() || "Software Engineer";
+      const ctc = document.getElementById("jd-ctc").value.trim() || "Competitive";
+      const minCgpa = parseFloat(document.getElementById("jd-cgpa").value) || 7.0;
+      const maxBacklogs = parseInt(document.getElementById("jd-backlogs").value, 10) || 0;
+      const allowedBranches = document.getElementById("jd-branches").value.split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
+      const mustHaveSkills = document.getElementById("jd-skills").value.split(",").map(s => s.trim()).filter(Boolean);
+
+      const id = "custom_" + Date.now();
+      state.jds.unshift({ id, company, role, ctc, minCgpa, allowedBranches, maxBacklogs, mustHaveSkills, goodToHaveSkills: [] });
+      state.activeJdId = id;
+      renderJDs();
+      closeJDModal();
+      toast(`Added ${company}`);
+    }
+
+    function addLog(msg) {
+      const el = document.getElementById("exec-log");
+      const div = document.createElement("div");
+      div.textContent = msg;
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function copyText(text, successMsg) {
+      navigator.clipboard.writeText(text).then(() => toast(successMsg || "Copied!"));
+    }
+
+    function toast(msg, type = "info") {
+      const wrap = document.getElementById("toast-wrap");
+      const el = document.createElement("div");
+      el.className = `pointer-events-auto px-3.5 py-2.5 rounded-xl text-xs font-medium shadow-lg border ${
+        type === "error"
+          ? "bg-rose-600 text-white border-rose-700"
+          : "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-800 dark:border-stone-200"
+      }`;
+      el.textContent = msg;
+      wrap.appendChild(el);
+      setTimeout(() => el.remove(), 2800);
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+    }
+
+    init();
+  </script>
+</body>
+</html>

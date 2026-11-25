@@ -1313,6 +1313,24 @@
           </div>
         </div>
 
+        ${rt.recommendedCourses?.length ? `
+          <div class="space-y-2">
+            <div class="font-semibold">Recommended YouTube Courses (Skill Gaps)</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              ${rt.recommendedCourses.map(c => `
+                <a href="${escapeHtml(c.url)}" target="_blank" rel="noopener"
+                  class="interactive-card p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900 flex items-center justify-between gap-2 hover:border-rose-400">
+                  <div class="min-w-0">
+                    <div class="text-[11px] font-semibold truncate">${escapeHtml(c.courseTitle)}</div>
+                    <div class="text-[10px] text-stone-500 dark:text-zinc-400">${escapeHtml(c.skill)} · ${escapeHtml(c.badge)}</div>
+                  </div>
+                  <span class="shrink-0 px-2 py-1 rounded-lg bg-rose-600 text-white text-[10px] font-semibold">▶ Watch ↗</span>
+                </a>
+              `).join("")}
+            </div>
+          </div>
+        ` : ""}
+
         ${ex.upskilling_plan_7_days?.length ? `
           <div class="space-y-2">
             <div class="font-semibold">Interactive 7-Day Upskilling Checklist</div>
@@ -1320,12 +1338,20 @@
               ${ex.upskilling_plan_7_days.map((step, i) => {
                 const checked = !!item.checkedDays[i];
                 return `
-                  <label class="flex items-start gap-2.5 p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900 cursor-pointer">
-                    <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleDayTask('${item.id}', ${i})" class="mt-0.5 accent-blue-600" />
-                    <div class="${checked ? "line-through opacity-60" : ""}">
-                      <div class="font-semibold">${escapeHtml(step.day)} · ${escapeHtml(step.focus_topic)}</div>
-                      <div class="text-stone-500 dark:text-zinc-400">${escapeHtml(step.mini_task)}</div>
+                  <label class="flex items-start justify-between gap-2.5 p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900 cursor-pointer">
+                    <div class="flex items-start gap-2.5">
+                      <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleDayTask('${item.id}', ${i})" class="mt-0.5 accent-blue-600" />
+                      <div class="${checked ? "line-through opacity-60" : ""}">
+                        <div class="font-semibold">${escapeHtml(step.day)} · ${escapeHtml(step.focus_topic)}</div>
+                        <div class="text-stone-500 dark:text-zinc-400">${escapeHtml(step.mini_task)}</div>
+                      </div>
                     </div>
+                    ${step.youtube_url ? `
+                      <a href="${escapeHtml(step.youtube_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"
+                        class="interactive-btn shrink-0 px-2.5 py-1 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-[11px] font-semibold">
+                        ▶ YouTube ↗
+                      </a>
+                    ` : ""}
                   </label>
                 `;
               }).join("")}
@@ -1475,28 +1501,58 @@
         `;
       } else if (rt.route === "UPSKILL_TRACK") {
         const steps = ex.upskilling_plan_7_days || [];
+        const courses = rt.recommendedCourses || [];
         const doneCount = steps.filter((_, idx) => item.checkedDays?.[String(idx)]).length;
         const pct = steps.length ? Math.round((doneCount / steps.length) * 100) : 0;
         card = `
           <div class="p-5 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20 space-y-4">
             <div class="flex items-center justify-between gap-2 flex-wrap">
               <div>
-                <div class="text-sm font-semibold text-amber-800 dark:text-amber-300">⚡ Upskill Track — Action Plan Required</div>
+                <div class="text-sm font-semibold text-amber-800 dark:text-amber-300">⚡ Upskill Track — Action Plan &amp; YouTube Courses</div>
                 <p class="text-xs text-stone-600 dark:text-zinc-300 mt-0.5">${escapeHtml(rt.verdictReason)}</p>
               </div>
               <span class="text-xs font-mono font-semibold">${pct}% complete</span>
             </div>
+
+            ${courses.length ? `
+              <div class="space-y-2">
+                <div class="text-xs font-semibold">Recommended YouTube Courses for Your Missing Skills</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  ${courses.map(c => `
+                    <a href="${escapeHtml(c.url)}" target="_blank" rel="noopener"
+                      class="interactive-card p-3 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 flex items-center justify-between gap-3 hover:border-rose-400">
+                      <div class="min-w-0">
+                        <div class="text-xs font-semibold truncate">${escapeHtml(c.courseTitle)}</div>
+                        <div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">${escapeHtml(c.skill)} · ${escapeHtml(c.badge)}</div>
+                      </div>
+                      <span class="shrink-0 px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-semibold">
+                        ▶ Watch Course ↗
+                      </span>
+                    </a>
+                  `).join("")}
+                </div>
+              </div>
+            ` : ""}
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               ${steps.map((s, idx) => {
                 const checked = !!item.checkedDays?.[String(idx)];
                 return `
-                  <label class="interactive-card p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 space-y-1.5 cursor-pointer block">
-                    <div class="flex items-center justify-between">
-                      <span class="text-xs font-semibold">${escapeHtml(s.day)}</span>
-                      <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleDayTask('${item.id}', ${idx})" class="accent-blue-600" />
+                  <label class="interactive-card p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 space-y-2 cursor-pointer flex flex-col justify-between">
+                    <div class="space-y-1.5">
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold">${escapeHtml(s.day)}</span>
+                        <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleDayTask('${item.id}', ${idx})" class="accent-blue-600" />
+                      </div>
+                      <div class="text-xs font-medium">${escapeHtml(s.focus_topic)}</div>
+                      <div class="text-[11px] text-stone-500 dark:text-zinc-400">${escapeHtml(s.mini_task)}</div>
                     </div>
-                    <div class="text-xs font-medium">${escapeHtml(s.focus_topic)}</div>
-                    <div class="text-[11px] text-stone-500 dark:text-zinc-400">${escapeHtml(s.mini_task)}</div>
+                    ${s.youtube_url ? `
+                      <a href="${escapeHtml(s.youtube_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"
+                        class="interactive-btn inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-[11px] font-semibold">
+                        ▶ Watch YouTube Tutorial ↗
+                      </a>
+                    ` : ""}
                   </label>
                 `;
               }).join("")}

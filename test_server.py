@@ -36,7 +36,7 @@ def test_deterministic_router() -> None:
     assert res1["route"] == "SHORTLISTED", res1
     assert res1["matchPct"] == 100, res1
 
-    # 2. Buzzword student -> UPSKILL_TRACK (Flagged)
+    # 2. Buzzword / Skill-Gap student -> UPSKILL_TRACK + YouTube course links
     res2 = evaluate_deterministic_rules(
         {
             "branch": "CSE",
@@ -49,12 +49,23 @@ def test_deterministic_router() -> None:
             "unverified_claims": [
                 {"skill": "Kubernetes", "reason": "No project proof"},
             ],
+            "upskilling_plan_7_days": [
+                {
+                    "day": "Day 1-2",
+                    "focus_topic": "REST APIs with FastAPI",
+                    "mini_task": "Build 3 endpoints",
+                    "youtube_query": "FastAPI REST API tutorial",
+                }
+            ],
         },
         cloud_jd,
         DEFAULT_JDS,
     )
     assert res2["route"] == "UPSKILL_TRACK", res2
     assert res2["routeLabel"] == "Flagged + Upskill", res2
+    course_skills = {c["skill"] for c in res2["recommendedCourses"]}
+    assert "Docker" in course_skills and "Kubernetes" in course_skills, res2
+    assert all(c["url"].startswith("https://www.youtube.com/results?search_query=") for c in res2["recommendedCourses"])
 
     # 3. Low CGPA / ECE -> REROUTED to DataPulse Analytics
     res3 = evaluate_deterministic_rules(

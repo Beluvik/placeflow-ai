@@ -5,6 +5,7 @@ import os
 import ssl
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any
 
@@ -113,8 +114,9 @@ RESPONSE_SCHEMA = {
                     "day": {"type": "STRING"},
                     "focus_topic": {"type": "STRING"},
                     "mini_task": {"type": "STRING"},
+                    "youtube_query": {"type": "STRING"},
                 },
-                "required": ["day", "focus_topic", "mini_task"],
+                "required": ["day", "focus_topic", "mini_task", "youtube_query"],
             },
         },
         "drafted_notification": {"type": "STRING"},
@@ -173,6 +175,77 @@ def _skill_matches(candidate_skills: list[str], target_skill: str) -> bool:
         if t == sl or t in sl or sl in t or any(a in sl for a in aliases):
             return True
     return False
+
+
+SKILL_COURSE_CATALOG: dict[str, tuple[str, str]] = {
+    "rest apis": ("REST APIs & FastAPI Crash Course (Hands-On)", "FastAPI Python REST API full course project tutorial"),
+    "docker": ("Docker & Docker Compose Full Course", "Docker and Docker Compose full course for beginners hands on"),
+    "kubernetes": ("Kubernetes Beginners to Deployment Course", "Kubernetes full course for beginners TechWorld with Nana"),
+    "python": ("Python Backend & Problem Solving Course", "Python full course for beginners freeCodeCamp"),
+    "sql": ("SQL & PostgreSQL Database Design Course", "PostgreSQL SQL full course freeCodeCamp"),
+    "git": ("Git & GitHub Team Workflow Tutorial", "Git and GitHub crash course for beginners"),
+    "react": ("React Complete Course + Hooks Project", "React full course freeCodeCamp"),
+    "typescript": ("TypeScript Full Course for React Developers", "TypeScript full course for beginners"),
+    "html/css": ("Modern Responsive HTML & CSS Course", "HTML CSS full course freeCodeCamp"),
+    "next.js": ("Next.js App Router Full Course", "Next.js full course tutorial project"),
+    "tailwind css": ("Tailwind CSS Complete UI Course", "Tailwind CSS full course tutorial"),
+    "aws": ("AWS Cloud Practitioner & EC2/S3 Hands-On", "AWS full course for beginners freeCodeCamp"),
+    "microservices": ("Microservices Architecture & APIs Course", "Microservices architecture full course hands on"),
+    "excel": ("Excel Pivot Tables, XLOOKUP & Dashboards", "Microsoft Excel data analysis full course freeCodeCamp"),
+    "data visualization": ("Data Visualization with Python & Dashboards", "Data visualization full course Python Matplotlib Power BI"),
+    "power bi": ("Power BI End-to-End Dashboard Course", "Power BI full course for beginners"),
+    "statistics": ("Statistics for Data Science & Analytics", "Statistics for data science full course freeCodeCamp"),
+    "redis": ("Redis Caching & Fast Backend Patterns", "Redis crash course tutorial"),
+}
+
+
+def _youtube_search_url(query: str) -> str:
+    """Build a reliable YouTube search URL targeted at full courses."""
+    encoded = urllib.parse.quote_plus(query.strip())
+    return f"https://www.youtube.com/results?search_query={encoded}"
+
+
+def build_youtube_courses(
+    extracted: dict[str, Any], missing_must_have: list[str]
+) -> list[dict[str, str]]:
+    """Attach YouTube course links to roadmap steps and build per-skill course cards."""
+    for step in extracted.get("upskilling_plan_7_days", []) or []:
+        raw_q = str(step.get("youtube_query") or "").strip()
+        if not raw_q:
+            topic = str(step.get("focus_topic") or "software engineering").strip()
+            raw_q = f"{topic} full course tutorial"
+        step["youtube_query"] = raw_q
+        step["youtube_url"] = _youtube_search_url(raw_q)
+
+    candidates: list[tuple[str, str]] = []
+    for skill in missing_must_have:
+        candidates.append((skill, "Missing JD Skill"))
+    for claim in extracted.get("unverified_claims", []) or []:
+        skill_name = str(claim.get("skill") or "").strip()
+        if skill_name:
+            candidates.append((skill_name, "Needs Project Proof"))
+
+    seen: set[str] = set()
+    courses: list[dict[str, str]] = []
+    for skill, badge in candidates:
+        key = skill.strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        title, query = SKILL_COURSE_CATALOG.get(
+            key,
+            (f"{skill} Full Course & Mini-Project", f"{skill} full course project tutorial"),
+        )
+        courses.append(
+            {
+                "skill": skill,
+                "badge": badge,
+                "courseTitle": title,
+                "query": query,
+                "url": _youtube_search_url(query),
+            }
+        )
+    return courses
 
 
 def evaluate_deterministic_rules(
@@ -286,6 +359,8 @@ def evaluate_deterministic_rules(
                 f"Meets cutoffs, missing {', '.join(missing_must_have)} — assigned 7-day roadmap."
             )
 
+    recommended_courses = build_youtube_courses(extracted, missing_must_have)
+
     return {
         "normalizedBranch": branch,
         "passesCgpa": passes_cgpa,
@@ -297,6 +372,7 @@ def evaluate_deterministic_rules(
         "routeLabel": route_label,
         "verdictReason": verdict_reason,
         "altMatches": alt_matches,
+        "recommendedCourses": recommended_courses,
     }
 
 
@@ -318,7 +394,7 @@ def call_gemini_audit(
         "2. `verified_skills`: ONLY include a skill if there is concrete evidence in a Project, Internship, or Work Experience bullet proving they actually used it. Quote the specific project/internship in `evidence_source`.\n"
         "3. `unverified_claims`: Any technical skill listed in a Skills/Summary section that has ZERO mention or proof inside Projects/Experience MUST go here with a clear `reason`.\n"
         "4. `missing_must_have_skills`: List all JD must-have skills not present in `verified_skills`.\n"
-        "5. `upskilling_plan_7_days`: Provide 3 concise actionable steps (e.g. Day 1-2, Day 3-4, Day 5-7) to close missing skills or build proof for unverified skills.\n"
+        "5. `upskilling_plan_7_days`: Provide 3 concise actionable steps (e.g. Day 1-2, Day 3-4, Day 5-7) to close missing skills or build proof for unverified skills, including a specific `youtube_query` (e.g. 'FastAPI REST API Python full course tutorial') for each step.\n"
         "6. `drafted_notification`: Write a concise 2-3 sentence placement notification email to the student.\n\n"
         f"TARGET JD:\n{json.dumps(jd, indent=2)}"
     )

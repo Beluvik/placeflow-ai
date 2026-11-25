@@ -76,8 +76,29 @@ def test_deterministic_router() -> None:
     assert res3["route"] == "REROUTED", res3
     assert res3["altMatches"][0]["jdId"] == "data", res3
 
-    # 4. Backlogs violation -> Blocked
+    # 4. Cutoff miss WITH strong verified projects -> PORTFOLIO_EXCEPTION
     res4 = evaluate_deterministic_rules(
+        {
+            "branch": "ECE",
+            "cgpa": 7.25,
+            "active_backlogs": 0,
+            "verified_skills": [
+                {"skill": "Python", "evidence_source": "CampusPay"},
+                {"skill": "FastAPI", "evidence_source": "CampusPay"},
+                {"skill": "PostgreSQL", "evidence_source": "CampusPay"},
+                {"skill": "Docker", "evidence_source": "CampusPay"},
+                {"skill": "Git", "evidence_source": "CampusPay"},
+            ],
+            "unverified_claims": [],
+        },
+        cloud_jd,
+        DEFAULT_JDS,
+    )
+    assert res4["route"] == "PORTFOLIO_EXCEPTION", res4
+    assert res4["routeLabel"] == "Portfolio Exception", res4
+
+    # 5. Backlogs violation with weak/no verified skills -> Blocked
+    res5 = evaluate_deterministic_rules(
         {
             "branch": "CSE",
             "cgpa": 8.0,
@@ -88,8 +109,8 @@ def test_deterministic_router() -> None:
         cloud_jd,
         DEFAULT_JDS,
     )
-    assert res4["route"] == "REROUTED", res4
-    assert res4["altMatches"] == [], res4
+    assert res5["route"] == "REROUTED", res5
+    assert res5["altMatches"] == [], res5
 
 
 def _invoke_handler(method: str, path: str, body: dict | None = None) -> tuple[int, bytes]:
@@ -137,7 +158,7 @@ def test_http_handlers() -> None:
 
     status, demos_bytes = _invoke_handler("GET", "/api/demo-resumes")
     demos = json.loads(demos_bytes.decode("utf-8"))
-    assert status == 200 and len(demos["files"]) == 4
+    assert status == 200 and len(demos["files"]) == 5
     assert all(f["fileName"].endswith(".pdf") and len(f["pdfBase64"]) > 1000 for f in demos["files"])
 
     orig_load = server.load_api_key

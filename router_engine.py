@@ -178,7 +178,7 @@ def _skill_matches(candidate_skills: list[str], target_skill: str) -> bool:
 def evaluate_deterministic_rules(
     extracted: dict[str, Any], target_jd: dict[str, Any], all_jds: list[dict[str, Any]]
 ) -> dict[str, Any]:
-    """Run strict non-AI eligibility rules and 3-track auto-routing."""
+    """Run strict non-AI eligibility rules and 4-track auto-routing."""
     cgpa = float(extracted.get("cgpa") or 0.0)
     branch = _normalize_branch(str(extracted.get("branch") or ""))
     backlogs = int(extracted.get("active_backlogs") or 0)
@@ -239,7 +239,6 @@ def evaluate_deterministic_rules(
         alt_matches.sort(key=lambda x: x["fitPct"], reverse=True)
 
     if not (passes_cgpa and passes_branch and passes_backlogs):
-        route = "REROUTED"
         reasons = []
         if not passes_cgpa:
             reasons.append(f"CGPA {cgpa} < {min_cgpa}")
@@ -248,7 +247,16 @@ def evaluate_deterministic_rules(
         if not passes_backlogs:
             reasons.append(f"Backlogs {backlogs} > max {max_backlogs}")
 
-        if alt_matches:
+        # New 4th track: Strong verified project proof despite academic cutoff miss
+        if match_pct >= 75 and len(unverified_claims) == 0 and len(verified_names) >= 3:
+            route = "PORTFOLIO_EXCEPTION"
+            route_label = "Portfolio Exception"
+            verdict_reason = (
+                f"Missed hard cutoff ({'; '.join(reasons)}), but {match_pct}% of must-have skills "
+                f"are backed by strong verified projects — nominated for Coordinator Cutoff Waiver."
+            )
+        elif alt_matches:
+            route = "REROUTED"
             route_label = "Auto-Rerouted"
             best = alt_matches[0]
             verdict_reason = (
@@ -256,6 +264,7 @@ def evaluate_deterministic_rules(
                 f"{best['company']} — {best['role']} ({best['fitPct']}% skill fit)."
             )
         else:
+            route = "REROUTED"
             route_label = "Blocked (Cutoff)"
             verdict_reason = f"Ineligible across active JDs ({'; '.join(reasons)})."
     elif match_pct >= 75 and len(unverified_claims) == 0:

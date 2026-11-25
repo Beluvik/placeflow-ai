@@ -73,39 +73,41 @@ def verify_against_erp(
     record = COLLEGE_ERP_DB.get(key)
     if not record:
         return {
-            "status": "NOT_IN_ERP",
+            "status": "INVALID",
             "verified": False,
+            "registeredInErp": False,
             "usn": "UNREGISTERED",
             "officialCgpa": resume_cgpa,
             "officialSemester": claimed_semester or 7,
             "officialBranch": resume_branch,
             "officialBacklogs": resume_backlogs,
             "discrepancies": ["Student email not found in official College ERP directory."],
-            "summary": "Unregistered in College ERP — manual transcript check advised.",
+            "summary": "INVALID — Student email not found in official College ERP directory.",
         }
 
     discrepancies: list[str] = []
-    if abs(float(record["cgpa"]) - float(resume_cgpa)) > 0.05:
+    if abs(float(record["cgpa"]) - float(resume_cgpa)) > 0.005:
         discrepancies.append(
-            f"CGPA mismatch: Resume states {resume_cgpa}, ERP record shows {record['cgpa']}."
+            f"CGPA mismatch: Resume/input states {resume_cgpa}, ERP record shows {record['cgpa']}."
         )
     if record["branch"].upper() != (resume_branch or "").strip().upper():
         discrepancies.append(
-            f"Branch mismatch: Resume states {resume_branch}, ERP shows {record['branch']}."
+            f"Branch mismatch: Resume/input states {resume_branch}, ERP shows {record['branch']}."
         )
     if int(record["active_backlogs"]) != int(resume_backlogs):
         discrepancies.append(
-            f"Backlogs mismatch: Resume states {resume_backlogs}, ERP shows {record['active_backlogs']}."
+            f"Backlogs mismatch: Resume/input states {resume_backlogs}, ERP shows {record['active_backlogs']}."
         )
     if claimed_semester is not None and int(claimed_semester) != int(record["semester"]):
         discrepancies.append(
-            f"Semester mismatch: Claimed Sem {claimed_semester}, ERP shows Sem {record['semester']}."
+            f"Semester mismatch: Input states Sem {claimed_semester}, ERP shows Sem {record['semester']}."
         )
 
     is_clean = len(discrepancies) == 0
     return {
-        "status": "VERIFIED" if is_clean else "MISMATCH_FLAGGED",
+        "status": "VERIFIED" if is_clean else "INVALID",
         "verified": is_clean,
+        "registeredInErp": True,
         "usn": record["usn"],
         "officialCgpa": record["cgpa"],
         "officialSemester": record["semester"],
@@ -113,9 +115,9 @@ def verify_against_erp(
         "officialBacklogs": record["active_backlogs"],
         "discrepancies": discrepancies,
         "summary": (
-            f"Verified via College ERP ({record['usn']} · Sem {record['semester']} · CGPA {record['cgpa']})"
+            f"VERIFIED via College ERP ({record['usn']} · Sem {record['semester']} · CGPA {record['cgpa']})"
             if is_clean
-            else "; ".join(discrepancies)
+            else f"INVALID — {'; '.join(discrepancies)}"
         ),
     }
 
@@ -131,7 +133,7 @@ def compute_credibility_score(
     unverified_count = len(extracted.get("unverified_claims", []) or [])
     total_claimed = max(verified_count + unverified_count, 1)
 
-    erp_pts = 35 if erp_check.get("verified") else (15 if erp_check.get("status") == "NOT_IN_ERP" else 0)
+    erp_pts = 35 if erp_check.get("verified") else 0
     proof_ratio = verified_count / total_claimed
     proof_pts = round(proof_ratio * 35)
     buzzword_pts = max(0, 20 - (unverified_count * 7))

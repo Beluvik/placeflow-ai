@@ -264,7 +264,7 @@ def evaluate_deterministic_rules(
 
     erp = verify_against_erp(student_email, resume_cgpa, resume_branch, resume_backlogs)
     # Use official College ERP record as authoritative truth if student is registered
-    if erp["status"] in ("VERIFIED", "MISMATCH_FLAGGED"):
+    if erp.get("registeredInErp"):
         cgpa = float(erp["officialCgpa"])
         branch = _normalize_branch(str(erp["officialBranch"]))
         backlogs = int(erp["officialBacklogs"])

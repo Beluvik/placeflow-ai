@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from erp_db import COLLEGE_ERP_DB, verify_against_erp
+from erp_db import COLLEGE_ERP_DB, compute_credibility_score, verify_against_erp
 from router_engine import (
     DEFAULT_JDS,
     GEMINI_MODELS,
@@ -146,6 +146,14 @@ def _build_college_analytics() -> dict[str, Any]:
     }
 
 
+def _record_belongs_to_student(record: dict[str, Any], student_email: str) -> bool:
+    """Return True when an evaluated record belongs to the signed-in student."""
+    key = student_email.strip().lower()
+    extracted_email = str(record.get("extracted", {}).get("email", "")).strip().lower()
+    owner_email = str(record.get("ownerEmail", "")).strip().lower()
+    return extracted_email == key or owner_email == key
+
+
 def _find_student_profile(email: str) -> tuple[dict[str, Any] | None, dict[str, Any]]:
     """Return latest evaluated record for student plus fallback academic profile from ERP."""
     key = email.strip().lower()
@@ -153,8 +161,7 @@ def _find_student_profile(email: str) -> tuple[dict[str, Any] | None, dict[str, 
         own_records = [
             r
             for r in RESULTS_STORE
-            if r.get("status") == "ok"
-            and str(r.get("extracted", {}).get("email", "")).strip().lower() == key
+            if r.get("status") == "ok" and _record_belongs_to_student(r, key)
         ]
         latest = own_records[-1] if own_records else None
         active_jd = dict(ACTIVE_JD_SNAPSHOT)
@@ -323,6 +330,8 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                 return
             branch_filter = (qs.get("branch", [""])[0] or "").strip().upper()
             include_all = qs.get("includeAll", ["0"])[0] == "1"
+            erp_only = qs.get("erpOnly", ["0"])[0] == "1"
+            min_cred = int(qs.get("minCred", ["0"])[0] or "0")
             with _LOCK:
                 items = copy.deepcopy(RESULTS_STORE)
                 active_jd = dict(ACTIVE_JD_SNAPSHOT)
@@ -337,11 +346,31 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                 br = str(r.get("routing", {}).get("normalizedBranch") or "").upper()
                 if branch_filter and branch_filter != "ALL" and br != branch_filter:
                     continue
+                erp_ok = bool(r.get("routing", {}).get("erpVerification", {}).get("verified"))
+                if erp_only and not erp_ok:
+                    continue
+                cred_score = int(r.get("routing", {}).get("credibility", {}).get("score", 0))
+                if cred_score < min_cred:
+                    continue
                 candidates.append(r)
 
             candidates.sort(
                 key=lambda x: x.get("routing", {}).get("credibility", {}).get("score", 0),
                 reverse=True,
+            )
+            invited_count = sum(
+                1 for c in candidates if (c.get("hrAction") or {}).get("decision") == "INTERVIEW_INVITED"
+            )
+            erp_verified_count = sum(
+                1 for c in candidates if c.get("routing", {}).get("erpVerification", {}).get("verified")
+            )
+            avg_cred = (
+                round(
+                    sum(c.get("routing", {}).get("credibility", {}).get("score", 0) for c in candidates)
+                    / len(candidates)
+                )
+                if candidates
+                else 0
             )
             self._send_json(
                 200,
@@ -349,7 +378,32 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     "ok": True,
                     "activeJd": active_jd,
                     "candidates": candidates,
+                    "hrSummary": {
+                        "totalCandidates": len(candidates),
+                        "interviewInvitedCount": invited_count,
+                        "erpVerifiedCount": erp_verified_count,
+                        "avgCredibility": avg_cred,
+                    },
                 },
+            )
+            return
+
+        if path == "/api/student/sample-pdf":
+            session = self._require_role("student")
+            if not session:
+                return
+            email_prefix = session["email"].split("@", 1)[0].split(".")[0].lower()
+            matched = next(
+                (p for p in sorted(SAMPLE_DIR.glob("*.pdf")) if email_prefix in p.name.lower()),
+                None,
+            )
+            if not matched:
+                self._send_json(404, {"error": "No sample PDF bundled for this student email."})
+                return
+            b64 = base64.b64encode(matched.read_bytes()).decode("ascii")
+            self._send_json(
+                200,
+                {"ok": True, "fileName": matched.name, "sizeBytes": matched.stat().st_size, "pdfBase64": b64},
             )
             return
 
@@ -363,8 +417,10 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     copy.deepcopy(r)
                     for r in RESULTS_STORE
                     if r.get("status") == "ok"
-                    and str(r.get("extracted", {}).get("email", "")).strip().lower()
-                    == student_email
+                    and (
+                        str(r.get("extracted", {}).get("email", "")).strip().lower() == student_email
+                        or str(r.get("ownerEmail", "")).strip().lower() == student_email
+                    )
                 ]
                 jds_copy = copy.deepcopy(JDS_STORE)
                 active_jd = dict(ACTIVE_JD_SNAPSHOT)
@@ -499,8 +555,9 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                 return
             try:
                 body = self._read_json()
+                email = str(body.get("email") or "").strip().lower()
                 res = verify_against_erp(
-                    email=str(body.get("email") or ""),
+                    email=email,
                     resume_cgpa=float(body.get("resumeCgpa") or 0.0),
                     resume_branch=str(body.get("resumeBranch") or ""),
                     resume_backlogs=int(body.get("resumeBacklogs") or 0),
@@ -510,7 +567,64 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                         else None
                     ),
                 )
-                self._send_json(200, {"ok": True, "erpVerification": res})
+                updated_record = None
+                if body.get("syncRecord"):
+                    with _LOCK:
+                        rec_id = str(body.get("recordId") or "")
+                        target = next(
+                            (
+                                r
+                                for r in reversed(RESULTS_STORE)
+                                if (rec_id and r.get("id") == rec_id)
+                                or (
+                                    not rec_id
+                                    and str(r.get("extracted", {}).get("email", "")).strip().lower()
+                                    == email
+                                )
+                            ),
+                            None,
+                        )
+                        if target:
+                            target["routing"]["erpVerification"] = res
+                            target["routing"]["credibility"] = compute_credibility_score(
+                                target["extracted"],
+                                target["routing"],
+                                res,
+                                target.get("skillTest"),
+                            )
+                            updated_record = copy.deepcopy(target)
+                self._send_json(200, {"ok": True, "erpVerification": res, "updatedRecord": updated_record})
+            except Exception as exc:
+                self._send_json(400, {"error": str(exc)})
+            return
+
+        if path == "/api/hr/decision":
+            session = self._require_role("hr")
+            if not session:
+                return
+            try:
+                body = self._read_json()
+                rec_id = str(body.get("id") or "")
+                decision = str(body.get("decision") or "INTERVIEW_INVITED").strip().upper()
+                slot = str(body.get("interviewSlot") or "").strip()
+                note = str(body.get("hrNote") or "").strip()
+                if decision not in ("INTERVIEW_INVITED", "ON_HOLD", "DECLINED"):
+                    self._send_json(400, {"error": "Invalid HR decision."})
+                    return
+                with _LOCK:
+                    target = next((r for r in RESULTS_STORE if r.get("id") == rec_id), None)
+                    if not target or target.get("status") != "ok":
+                        self._send_json(404, {"error": "Candidate record not found."})
+                        return
+                    target["hrAction"] = {
+                        "decision": decision,
+                        "interviewSlot": slot,
+                        "hrNote": note,
+                        "updatedBy": session["email"],
+                        "updatedAt": time.strftime("%Y-%m-%d %H:%M"),
+                    }
+                    updated = copy.deepcopy(target)
+                self._send_json(200, {"ok": True, "record": updated})
             except Exception as exc:
                 self._send_json(400, {"error": str(exc)})
             return
@@ -548,8 +662,10 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                 self._send_json(400, {"error": str(exc)})
             return
 
-        if path == "/api/verify-resume":
-            if not self._require_role("college"):
+        if path in ("/api/verify-resume", "/api/student/upload-resume"):
+            is_student_upload = path == "/api/student/upload-resume"
+            session = self._require_role("student" if is_student_upload else "college")
+            if not session:
                 return
             started = time.time()
             try:
@@ -558,13 +674,14 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                 if not api_key:
                     self._send_json(
                         400,
-                        {"error": "No Gemini API key configured. Click 'Set Gemini Key' first."},
+                        {"error": "No Gemini API key configured. Ask College Admin to set Gemini Key first."},
                     )
                     return
 
                 with _LOCK:
                     all_jds = body.get("allJds") or copy.deepcopy(JDS_STORE)
-                jd = body.get("jd") or all_jds[0]
+                jd_id = str(body.get("jdId") or "")
+                jd = body.get("jd") or next((j for j in all_jds if j["id"] == jd_id), all_jds[0])
                 pdf_b64 = body.get("pdfBase64")
                 resume_text = body.get("resumeText")
                 rec_id = str(body.get("id") or f"rec_{secrets.token_hex(6)}")
@@ -576,6 +693,8 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     pdf_base64=pdf_b64,
                     resume_text=resume_text,
                 )
+                if is_student_upload and not audit["extracted"].get("email"):
+                    audit["extracted"]["email"] = session["email"]
                 routing = evaluate_deterministic_rules(audit["extracted"], jd, all_jds)
                 elapsed_ms = round((time.time() - started) * 1000)
 
@@ -583,6 +702,8 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     "id": rec_id,
                     "fileName": file_name,
                     "status": "ok",
+                    "uploadedBy": "student" if is_student_upload else "college",
+                    "ownerEmail": session["email"].lower() if is_student_upload else str(audit["extracted"].get("email", "")).strip().lower(),
                     "extracted": audit["extracted"],
                     "routing": routing,
                     "meta": {
@@ -593,11 +714,20 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     "checkedDays": {},
                     "appliedAlt": False,
                     "skillTest": None,
+                    "hrAction": None,
                 }
                 with _LOCK:
                     global ACTIVE_JD_SNAPSHOT
                     ACTIVE_JD_SNAPSHOT = jd
-                    RESULTS_STORE[:] = [r for r in RESULTS_STORE if r.get("id") != rec_id]
+                    RESULTS_STORE[:] = [
+                        r
+                        for r in RESULTS_STORE
+                        if r.get("id") != rec_id
+                        and not (
+                            is_student_upload
+                            and str(r.get("ownerEmail", "")).lower() == session["email"].lower()
+                        )
+                    ]
                     RESULTS_STORE.append(record)
 
                 self._send_json(200, {"ok": True, **record})
@@ -701,8 +831,7 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                             r
                             for r in reversed(RESULTS_STORE)
                             if r.get("status") == "ok"
-                            and str(r.get("extracted", {}).get("email", "")).strip().lower()
-                            == student_email
+                            and _record_belongs_to_student(r, student_email)
                         ),
                         None,
                     )
@@ -760,8 +889,7 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     if not target:
                         self._send_json(404, {"error": "Record not found."})
                         return
-                    owner_email = str(target.get("extracted", {}).get("email", "")).strip().lower()
-                    if owner_email != student_email:
+                    if not _record_belongs_to_student(target, student_email):
                         self._send_json(403, {"error": "Cannot modify another student's checklist."})
                         return
                     checked = target.setdefault("checkedDays", {})
@@ -784,8 +912,7 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     if not target:
                         self._send_json(404, {"error": "Record not found."})
                         return
-                    owner_email = str(target.get("extracted", {}).get("email", "")).strip().lower()
-                    if owner_email != student_email:
+                    if not _record_belongs_to_student(target, student_email):
                         self._send_json(403, {"error": "Cannot modify another student's drive."})
                         return
                     target["appliedAlt"] = True

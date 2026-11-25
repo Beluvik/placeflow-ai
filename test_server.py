@@ -380,6 +380,38 @@ def test_3_portal_rbac_and_proctored_test() -> None:
     rohan_col = next(r for r in college_after_hr["results"] if r["id"] == "rec_rohan_self")
     assert rohan_col["hrAction"]["decision"] == "INTERVIEW_INVITED"
 
+    analytics_after_hr = json.loads(_invoke("GET", "/api/college/analytics", token=college_tok)[1].decode("utf-8"))
+    assert analytics_after_hr["totalInvited"] >= 1
+    cse_after_hr = next(b for b in analytics_after_hr["branchStats"] if b["branch"] == "CSE")
+    assert cse_after_hr["invited"] >= 1
+
+    # Even a Portfolio Exception invited by HR reflects in College acceptanceRatePct & invited stats
+    kiran_ext = {
+        "student_name": "Kiran Gowda",
+        "email": "kiran.gowda@rit.edu",
+        "branch": "ECE",
+        "cgpa": 7.25,
+        "active_backlogs": 0,
+        "verified_skills": [
+            {"skill": "Python", "evidence_source": "CampusPay"},
+            {"skill": "SQL", "evidence_source": "CampusPay"},
+            {"skill": "REST APIs", "evidence_source": "CampusPay"},
+            {"skill": "Docker", "evidence_source": "CampusPay"},
+            {"skill": "Git", "evidence_source": "CampusPay"},
+        ],
+        "unverified_claims": [],
+        "project_summary": "Full FastAPI + Docker payment backend.",
+        "upskilling_plan_7_days": [],
+        "drafted_notification": "Portfolio exception.",
+    }
+    server.RESULTS_STORE.append(
+        {"id": "rec_kiran_stat", "fileName": "kiran.pdf", "status": "ok", "extracted": kiran_ext, "routing": evaluate_deterministic_rules(kiran_ext, DEFAULT_JDS[0], DEFAULT_JDS), "checkedDays": {}, "appliedAlt": False, "skillTest": None, "hrAction": None}
+    )
+    assert _invoke("POST", "/api/hr/decision", {"id": "rec_kiran_stat", "decision": "INTERVIEW_INVITED", "interviewSlot": "Fri 10:00 AM", "hrNote": "Strong projects"}, token=hr_tok)[0] == 200
+    analytics_kiran = json.loads(_invoke("GET", "/api/college/analytics", token=college_tok)[1].decode("utf-8"))
+    ece_after_hr = next(b for b in analytics_kiran["branchStats"] if b["branch"] == "ECE")
+    assert ece_after_hr["invited"] == 1 and ece_after_hr["shortlisted"] == 1 and ece_after_hr["acceptanceRatePct"] == 100
+
     rohan_me = json.loads(_invoke("GET", "/api/student/me", token=rohan_tok)[1].decode("utf-8"))
     assert rohan_me["records"][-1]["hrAction"]["interviewSlot"] == "Thu 11:00 AM - Technical Round 1"
 

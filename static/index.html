@@ -1386,7 +1386,7 @@
 
     // ==================== COLLEGE ANALYTICS & ERP ====================
     async function loadCollegeAnalytics() {
-      const res = await apiFetch("/api/college/analytics");
+      const [res] = await Promise.all([apiFetch("/api/college/analytics"), loadCollegeResults()]);
       if (!res.ok) return;
       const data = await res.json();
 
@@ -1397,13 +1397,14 @@
         bars.innerHTML = data.branchStats.map(b => `
           <div class="p-3 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 space-y-1.5">
             <div class="flex items-center justify-between">
-              <span class="font-semibold">${escapeHtml(b.branch)} <span class="text-stone-500 font-normal">(${b.shortlisted}/${b.total} shortlisted)</span></span>
+              <span class="font-semibold">${escapeHtml(b.branch)} <span class="text-stone-500 font-normal">(${b.shortlisted}/${b.total} shortlisted · ${b.invited || 0} HR invited)</span></span>
               <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">${b.acceptanceRatePct}% Acceptance</span>
             </div>
             <div class="w-full h-2 rounded-full bg-stone-200 dark:bg-zinc-800 overflow-hidden">
               <div class="h-full bg-emerald-500 rounded-full" style="width:${b.acceptanceRatePct}%"></div>
             </div>
-            <div class="flex gap-3 text-[11px] text-stone-500 font-mono">
+            <div class="flex gap-3 text-[11px] text-stone-500 font-mono flex-wrap">
+              <span class="text-emerald-600 dark:text-emerald-400 font-semibold">HR Invited: ${b.invited || 0}</span>
               <span>Exception: ${b.exception}</span>
               <span>Upskill: ${b.upskill}</span>
               <span>Rerouted: ${b.rerouted}</span>
@@ -1422,10 +1423,10 @@
 
     function renderBranchShortlist() {
       const br = document.getElementById("analytics-branch-filter").value;
-      const list = state.results.filter(r => r.status === "ok" && r.routing.route === "SHORTLISTED" && (br === "ALL" || r.routing.normalizedBranch === br));
+      const list = state.results.filter(r => r.status === "ok" && (r.routing.route === "SHORTLISTED" || r.hrAction?.decision === "INTERVIEW_INVITED") && (br === "ALL" || r.routing.normalizedBranch === br));
       const el = document.getElementById("branch-shortlist-list");
       el.innerHTML = list.length
-        ? list.map(r => `<div class="p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 flex items-center justify-between"><div><span class="font-semibold">${escapeHtml(r.extracted.student_name)}</span> · <span class="font-mono">${escapeHtml(r.routing.normalizedBranch)} (${r.routing.erpVerification?.officialCgpa ?? r.extracted.cgpa})</span></div>${routePill(r.routing)}</div>`).join("")
+        ? list.map(r => `<div class="p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 flex items-center justify-between gap-2 flex-wrap"><div><span class="font-semibold">${escapeHtml(r.extracted.student_name)}</span> · <span class="font-mono">${escapeHtml(r.routing.normalizedBranch)} (${r.routing.erpVerification?.officialCgpa ?? r.extracted.cgpa})</span></div><div class="flex items-center gap-1.5 flex-wrap">${hrActionBadge(r.hrAction)}${routePill(r.routing)}</div></div>`).join("")
         : `<div class="text-stone-500">No shortlisted students match branch filter "${escapeHtml(br)}".</div>`;
     }
 

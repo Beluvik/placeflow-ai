@@ -98,6 +98,9 @@ def _build_college_analytics() -> dict[str, Any]:
                 "branch": br,
                 "total": 0,
                 "shortlisted": 0,
+                "invited": 0,
+                "onHold": 0,
+                "declined": 0,
                 "exception": 0,
                 "upskill": 0,
                 "rerouted": 0,
@@ -106,7 +109,15 @@ def _build_college_analytics() -> dict[str, Any]:
         )
         bucket["total"] += 1
         route = rt.get("route")
-        if route == "SHORTLISTED":
+        hr_decision = str((r.get("hrAction") or {}).get("decision") or "").upper()
+        if hr_decision == "INTERVIEW_INVITED":
+            bucket["invited"] += 1
+        elif hr_decision == "ON_HOLD":
+            bucket["onHold"] += 1
+        elif hr_decision == "DECLINED":
+            bucket["declined"] += 1
+
+        if route == "SHORTLISTED" or hr_decision == "INTERVIEW_INVITED":
             bucket["shortlisted"] += 1
         elif route == "PORTFOLIO_EXCEPTION":
             bucket["exception"] += 1
@@ -126,18 +137,27 @@ def _build_college_analytics() -> dict[str, Any]:
         tot = max(br_info["total"], 1)
         br_info["acceptanceRatePct"] = round((br_info["shortlisted"] / tot) * 100)
         branch_list.append(br_info)
-    branch_list.sort(key=lambda b: (-b["acceptanceRatePct"], b["branch"]))
+    branch_list.sort(key=lambda b: (-b["acceptanceRatePct"], -b["invited"], b["branch"]))
 
     top_lacking = [{"skill": k, "count": v} for k, v in skill_gaps.most_common(8)]
     erp_dir = [{"email": email, **info} for email, info in sorted(COLLEGE_ERP_DB.items())]
 
     total_ok = len(ok_items)
-    total_shortlisted = sum(1 for r in ok_items if r.get("routing", {}).get("route") == "SHORTLISTED")
+    total_invited = sum(
+        1 for r in ok_items if (r.get("hrAction") or {}).get("decision") == "INTERVIEW_INVITED"
+    )
+    total_shortlisted = sum(
+        1
+        for r in ok_items
+        if r.get("routing", {}).get("route") == "SHORTLISTED"
+        or (r.get("hrAction") or {}).get("decision") == "INTERVIEW_INVITED"
+    )
     overall_rate = round((total_shortlisted / total_ok) * 100) if total_ok else 0
 
     return {
         "totalEvaluated": total_ok,
         "totalShortlisted": total_shortlisted,
+        "totalInvited": total_invited,
         "overallAcceptanceRatePct": overall_rate,
         "branchStats": branch_list,
         "topLackingSkills": top_lacking,

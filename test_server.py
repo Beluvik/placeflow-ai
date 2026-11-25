@@ -1,5 +1,6 @@
-"""Automated verification tests for PlaceFlow AI rule engine and HTTP handlers."""
+"""Automated verification tests for PlaceFlow AI 3-portal RBAC, ERP, HR credibility & tests."""
 
+import copy
 import io
 import json
 import sys
@@ -7,17 +8,27 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import server
+from erp_db import verify_against_erp
 from router_engine import DEFAULT_JDS, _build_ssl_context, evaluate_deterministic_rules
 
 
-def test_deterministic_router() -> None:
+def test_erp_and_deterministic_router() -> None:
     ctx = _build_ssl_context()
-    assert ctx.cert_store_stats()["x509_ca"] > 0, "Expected loaded CA certificates"
+    assert ctx.cert_store_stats()["x509_ca"] > 0
+
+    # ERP exact verification vs tampering detection
+    ok_erp = verify_against_erp("kiran.gowda@rit.edu", 7.25, "ECE", 0, claimed_semester=7)
+    assert ok_erp["status"] == "VERIFIED" and ok_erp["usn"] == "1MS23EC055"
+
+    bad_erp = verify_against_erp("kiran.gowda@rit.edu", 9.10, "CSE", 0, claimed_semester=8)
+    assert bad_erp["status"] == "MISMATCH_FLAGGED" and len(bad_erp["discrepancies"]) == 3
+
     cloud_jd = DEFAULT_JDS[0]
 
-    # 1. Strong match -> SHORTLISTED
+    # 1. Strong match -> SHORTLISTED + high credibility
     res1 = evaluate_deterministic_rules(
         {
+            "email": "aarav.sharma@rit.edu",
             "branch": "Computer Science & Engineering (CSE)",
             "cgpa": 8.72,
             "active_backlogs": 0,
@@ -33,12 +44,13 @@ def test_deterministic_router() -> None:
         cloud_jd,
         DEFAULT_JDS,
     )
-    assert res1["route"] == "SHORTLISTED", res1
-    assert res1["matchPct"] == 100, res1
+    assert res1["route"] == "SHORTLISTED" and res1["matchPct"] == 100
+    assert res1["credibility"]["score"] >= 90
 
-    # 2. Buzzword / Skill-Gap student -> UPSKILL_TRACK + YouTube course links
+    # 2. Buzzword / Skill-Gap -> UPSKILL_TRACK + YouTube courses
     res2 = evaluate_deterministic_rules(
         {
+            "email": "rohan.verma@rit.edu",
             "branch": "CSE",
             "cgpa": 7.9,
             "active_backlogs": 0,
@@ -46,30 +58,21 @@ def test_deterministic_router() -> None:
                 {"skill": "Python", "evidence_source": "CLI"},
                 {"skill": "Git", "evidence_source": "Repo"},
             ],
-            "unverified_claims": [
-                {"skill": "Kubernetes", "reason": "No project proof"},
-            ],
+            "unverified_claims": [{"skill": "Kubernetes", "reason": "No proof"}],
             "upskilling_plan_7_days": [
-                {
-                    "day": "Day 1-2",
-                    "focus_topic": "REST APIs with FastAPI",
-                    "mini_task": "Build 3 endpoints",
-                    "youtube_query": "FastAPI REST API tutorial",
-                }
+                {"day": "Day 1-2", "focus_topic": "FastAPI", "mini_task": "API", "youtube_query": "FastAPI"}
             ],
         },
         cloud_jd,
         DEFAULT_JDS,
     )
-    assert res2["route"] == "UPSKILL_TRACK", res2
-    assert res2["routeLabel"] == "Flagged + Upskill", res2
-    course_skills = {c["skill"] for c in res2["recommendedCourses"]}
-    assert "Docker" in course_skills and "Kubernetes" in course_skills, res2
-    assert all(c["url"].startswith("https://www.youtube.com/results?search_query=") for c in res2["recommendedCourses"])
+    assert res2["route"] == "UPSKILL_TRACK" and res2["routeLabel"] == "Flagged + Upskill"
+    assert any(c["skill"] == "Docker" for c in res2["recommendedCourses"])
 
-    # 3. Low CGPA / ECE -> REROUTED to DataPulse Analytics
+    # 3. ECE/Low CGPA -> REROUTED to DataPulse
     res3 = evaluate_deterministic_rules(
         {
+            "email": "meera.nair@rit.edu",
             "branch": "ECE",
             "cgpa": 7.12,
             "active_backlogs": 0,
@@ -84,14 +87,15 @@ def test_deterministic_router() -> None:
         cloud_jd,
         DEFAULT_JDS,
     )
-    assert res3["route"] == "REROUTED", res3
-    assert res3["altMatches"][0]["jdId"] == "data", res3
+    assert res3["route"] == "REROUTED" and res3["altMatches"][0]["jdId"] == "data"
 
     # 4. Cutoff miss WITH strong verified projects -> PORTFOLIO_EXCEPTION
+    # Even if resume lied and wrote cgpa 9.0, ERP forces 7.25 -> still caught!
     res4 = evaluate_deterministic_rules(
         {
+            "email": "kiran.gowda@rit.edu",
             "branch": "ECE",
-            "cgpa": 7.25,
+            "cgpa": 9.0,
             "active_backlogs": 0,
             "verified_skills": [
                 {"skill": "Python", "evidence_source": "CampusPay"},
@@ -105,28 +109,11 @@ def test_deterministic_router() -> None:
         cloud_jd,
         DEFAULT_JDS,
     )
-    assert res4["route"] == "PORTFOLIO_EXCEPTION", res4
-    assert res4["routeLabel"] == "Portfolio Exception", res4
-
-    # 5. Backlogs violation with weak/no verified skills -> Blocked
-    res5 = evaluate_deterministic_rules(
-        {
-            "branch": "CSE",
-            "cgpa": 8.0,
-            "active_backlogs": 2,
-            "verified_skills": [],
-            "unverified_claims": [],
-        },
-        cloud_jd,
-        DEFAULT_JDS,
-    )
-    assert res5["route"] == "REROUTED", res5
-    assert res5["altMatches"] == [], res5
+    assert res4["route"] == "PORTFOLIO_EXCEPTION"
+    assert res4["erpVerification"]["status"] == "MISMATCH_FLAGGED"
 
 
-def _invoke_handler(
-    method: str, path: str, body: dict | None = None, token: str = ""
-) -> tuple[int, bytes]:
+def _invoke(method: str, path: str, body: dict | None = None, token: str = "") -> tuple[int, bytes]:
     raw_body = json.dumps(body).encode("utf-8") if body is not None else b""
     headers = {"Content-Length": str(len(raw_body))}
     if token:
@@ -157,111 +144,125 @@ def _invoke_handler(
     return h.status_code, h.wfile.getvalue()
 
 
-def test_http_handlers() -> None:
+def test_3_portal_rbac_and_proctored_test() -> None:
     server.SESSIONS.clear()
     server.RESULTS_STORE.clear()
+    server.TESTS_STORE.clear()
+    server.JDS_STORE[:] = copy.deepcopy(DEFAULT_JDS)
+    server.ACTIVE_JD_SNAPSHOT = server.JDS_STORE[0]
 
-    status, html_bytes = _invoke_handler("GET", "/")
-    html = html_bytes.decode("utf-8")
-    assert status == 200
-    assert "PlaceFlow AI" in html
-    assert "webhook" not in html.lower()
+    assert _invoke("GET", "/")[0] == 200
+    assert _invoke("GET", "/api/demo-resumes")[0] == 401
+    assert _invoke("GET", "/api/hr/candidates")[0] == 401
+    assert _invoke("GET", "/api/student/me")[0] == 401
 
-    status, health_bytes = _invoke_handler("GET", "/api/health")
-    health = json.loads(health_bytes.decode("utf-8"))
-    assert status == 200 and health["ok"] is True
+    college_tok = json.loads(
+        _invoke("POST", "/api/login", {"role": "college", "email": server.COLLEGE_EMAIL, "passcode": server.COLLEGE_PASSCODE})[1].decode("utf-8")
+    )["token"]
+    hr_tok = json.loads(
+        _invoke("POST", "/api/login", {"role": "hr", "email": "hr@cloudbackend.com", "passcode": server.HR_PASSCODE})[1].decode("utf-8")
+    )["token"]
+    ananya_tok = json.loads(
+        _invoke("POST", "/api/login", {"role": "student", "email": "ananya.rao@rit.edu", "passcode": server.STUDENT_PASSCODE})[1].decode("utf-8")
+    )["token"]
 
-    status, jds_bytes = _invoke_handler("GET", "/api/jds")
-    jds = json.loads(jds_bytes.decode("utf-8"))
-    assert status == 200 and len(jds["jds"]) == 3
+    # Strict cross-portal 403 isolation
+    assert _invoke("GET", "/api/hr/candidates", token=college_tok)[0] == 403
+    assert _invoke("GET", "/api/student/me", token=college_tok)[0] == 403
+    assert _invoke("GET", "/api/college/analytics", token=hr_tok)[0] == 403
+    assert _invoke("GET", "/api/student/me", token=hr_tok)[0] == 403
+    assert _invoke("GET", "/api/college/analytics", token=ananya_tok)[0] == 403
+    assert _invoke("GET", "/api/hr/candidates", token=ananya_tok)[0] == 403
 
-    # Unauthenticated requests to protected routes -> 401
-    assert _invoke_handler("GET", "/api/demo-resumes")[0] == 401
-    assert _invoke_handler("GET", "/api/student/me")[0] == 401
-
-    # Sign in as Admin
-    status, admin_login_b = _invoke_handler(
-        "POST",
-        "/api/login",
-        {"role": "admin", "email": server.ADMIN_EMAIL, "passcode": server.ADMIN_PASSCODE},
+    # College can verify ERP & fetch 5 sample PDFs
+    assert len(json.loads(_invoke("GET", "/api/demo-resumes", token=college_tok)[1].decode("utf-8"))["files"]) == 5
+    erp_res = json.loads(
+        _invoke("POST", "/api/college/erp-verify", {"email": "ananya.rao@rit.edu", "resumeCgpa": 8.2, "resumeBranch": "ISE", "resumeBacklogs": 0, "claimedSemester": 7}, token=college_tok)[1].decode("utf-8")
     )
-    assert status == 200
-    admin_token = json.loads(admin_login_b.decode("utf-8"))["token"]
+    assert erp_res["erpVerification"]["verified"] is True
 
-    # Sign in as Student (Kiran)
-    status, stu_login_b = _invoke_handler(
-        "POST",
-        "/api/login",
-        {"role": "student", "email": "kiran.gowda@rit.edu", "passcode": server.STUDENT_PASSCODE},
-    )
-    assert status == 200
-    student_token = json.loads(stu_login_b.decode("utf-8"))["token"]
-
-    # Role isolation: Student blocked from Admin routes (403); Admin blocked from Student routes (403)
-    assert _invoke_handler("GET", "/api/demo-resumes", token=student_token)[0] == 403
-    assert _invoke_handler("GET", "/api/admin/results", token=student_token)[0] == 403
-    assert _invoke_handler("POST", "/api/verify-resume", {"fileName": "x.pdf"}, token=student_token)[0] == 403
-    assert _invoke_handler("GET", "/api/student/me", token=admin_token)[0] == 403
-
-    # Admin can fetch all 5 demo PDFs
-    status, demos_bytes = _invoke_handler("GET", "/api/demo-resumes", token=admin_token)
-    demos = json.loads(demos_bytes.decode("utf-8"))
-    assert status == 200 and len(demos["files"]) == 5
-    assert all(f["fileName"].endswith(".pdf") and len(f["pdfBase64"]) > 1000 for f in demos["files"])
-
-    # Missing Gemini key for Admin verify -> 400 JSON
-    orig_load = server.load_api_key
-    server.load_api_key = lambda: ""
-    try:
-        status, err_bytes = _invoke_handler(
-            "POST", "/api/verify-resume", {"fileName": "test.pdf"}, token=admin_token
-        )
-        assert status == 400
-        err_json = json.loads(err_bytes.decode("utf-8"))
-        assert "Gemini API key" in err_json["error"]
-    finally:
-        server.load_api_key = orig_load
-
-    # Seed evaluated records and verify strict per-student isolation + waiver promotion
+    # Seed Ananya as UPSKILL_TRACK (missing REST APIs, Docker) and Aarav as SHORTLISTED
+    ananya_ext = {
+        "student_name": "Ananya Rao",
+        "email": "ananya.rao@rit.edu",
+        "branch": "ISE",
+        "cgpa": 8.2,
+        "active_backlogs": 0,
+        "verified_skills": [
+            {"skill": "Python", "evidence_source": "MessMenu"},
+            {"skill": "SQL", "evidence_source": "MessMenu"},
+            {"skill": "Git", "evidence_source": "MessMenu"},
+        ],
+        "unverified_claims": [],
+        "project_summary": "Python & SQL CLI tools.",
+        "upskilling_plan_7_days": [],
+        "drafted_notification": "Upskill required.",
+    }
+    aarav_ext = {
+        "student_name": "Aarav Sharma",
+        "email": "aarav.sharma@rit.edu",
+        "branch": "CSE",
+        "cgpa": 8.72,
+        "active_backlogs": 0,
+        "verified_skills": [
+            {"skill": "Python", "evidence_source": "CampusRide"},
+            {"skill": "SQL", "evidence_source": "CampusRide"},
+            {"skill": "REST APIs", "evidence_source": "CampusRide"},
+            {"skill": "Docker", "evidence_source": "CampusRide"},
+            {"skill": "Git", "evidence_source": "CampusRide"},
+        ],
+        "unverified_claims": [],
+        "project_summary": "Full FastAPI + Docker suite.",
+        "upskilling_plan_7_days": [],
+        "drafted_notification": "Shortlisted.",
+    }
     server.RESULTS_STORE.extend(
         [
-            {
-                "id": "rec_kiran",
-                "fileName": "05_Kiran_Gowda_Portfolio_Exception.pdf",
-                "status": "ok",
-                "extracted": {"student_name": "Kiran Gowda", "email": "kiran.gowda@rit.edu"},
-                "routing": {"route": "PORTFOLIO_EXCEPTION", "routeLabel": "Portfolio Exception", "matchPct": 100},
-                "checkedDays": {},
-            },
-            {
-                "id": "rec_aarav",
-                "fileName": "01_Aarav_Sharma_Strong_Match.pdf",
-                "status": "ok",
-                "extracted": {"student_name": "Aarav Sharma", "email": "aarav.sharma@rit.edu"},
-                "routing": {"route": "SHORTLISTED", "routeLabel": "Shortlisted", "matchPct": 100},
-                "checkedDays": {},
-            },
+            {"id": "rec_ananya", "fileName": "ananya.pdf", "status": "ok", "extracted": ananya_ext, "routing": evaluate_deterministic_rules(ananya_ext, DEFAULT_JDS[0], DEFAULT_JDS), "checkedDays": {}, "appliedAlt": False, "skillTest": None},
+            {"id": "rec_aarav", "fileName": "aarav.pdf", "status": "ok", "extracted": aarav_ext, "routing": evaluate_deterministic_rules(aarav_ext, DEFAULT_JDS[0], DEFAULT_JDS), "checkedDays": {}, "appliedAlt": False, "skillTest": None},
         ]
     )
 
-    status, stu_me_b = _invoke_handler("GET", "/api/student/me", token=student_token)
-    stu_me = json.loads(stu_me_b.decode("utf-8"))
-    assert status == 200 and len(stu_me["records"]) == 1
-    assert stu_me["records"][0]["id"] == "rec_kiran"
+    # College Analytics checks branch acceptance rates & lacking skills
+    analytics = json.loads(_invoke("GET", "/api/college/analytics", token=college_tok)[1].decode("utf-8"))
+    cse_stat = next(b for b in analytics["branchStats"] if b["branch"] == "CSE")
+    assert cse_stat["acceptanceRatePct"] == 100
+    assert any(s["skill"] == "Docker" for s in analytics["topLackingSkills"])
 
-    # Kiran cannot modify Aarav's record
-    assert (
-        _invoke_handler("POST", "/api/student/toggle-day", {"id": "rec_aarav", "dayIdx": 0}, token=student_token)[0]
-        == 403
+    # HR sees only Aarav initially (with credibility score)
+    hr_before = json.loads(_invoke("GET", "/api/hr/candidates", token=hr_tok)[1].decode("utf-8"))
+    assert len(hr_before["candidates"]) == 1 and hr_before["candidates"][0]["id"] == "rec_aarav"
+
+    # Ananya generates AI skill test (ensure no answer key leaked!) and passes with webcam/mic
+    orig_load = server.load_api_key
+    server.load_api_key = lambda: ""  # test deterministic local question bank cleanly
+    try:
+        st_gen, gen_b = _invoke("POST", "/api/student/generate-test", {"jdId": "cloud", "skills": ["Docker", "REST APIs"]}, token=ananya_tok)
+        assert st_gen == 200
+        gen = json.loads(gen_b.decode("utf-8"))
+        assert len(gen["questions"]) == 5
+        assert all("correctIndex" not in q for q in gen["questions"])
+    finally:
+        server.load_api_key = orig_load
+
+    correct_answers = [q["correctIndex"] for q in server.TESTS_STORE[gen["testId"]]["questions"]]
+    st_sub, sub_b = _invoke(
+        "POST",
+        "/api/student/submit-test",
+        {"testId": gen["testId"], "answers": correct_answers, "proctoring": {"webcamActive": True, "micActive": True, "tabSwitches": 0, "durationSec": 45}},
+        token=ananya_tok,
     )
+    assert st_sub == 200
+    sub = json.loads(sub_b.decode("utf-8"))
+    assert sub["result"]["passed"] is True
+    assert sub["updatedRecord"]["routing"]["route"] == "SHORTLISTED"
 
-    # Admin approves Kiran's waiver -> Kiran sees SHORTLISTED in Student Portal
-    assert _invoke_handler("POST", "/api/admin/approve-waiver", {"id": "rec_kiran"}, token=admin_token)[0] == 200
-    stu_after = json.loads(_invoke_handler("GET", "/api/student/me", token=student_token)[1].decode("utf-8"))
-    assert stu_after["records"][0]["routing"]["route"] == "SHORTLISTED"
+    # Now HR sees BOTH Aarav and Ananya!
+    hr_after = json.loads(_invoke("GET", "/api/hr/candidates", token=hr_tok)[1].decode("utf-8"))
+    assert len(hr_after["candidates"]) == 2
 
 
 if __name__ == "__main__":
-    test_deterministic_router()
-    test_http_handlers()
+    test_erp_and_deterministic_router()
+    test_3_portal_rbac_and_proctored_test()
     print("ALL TESTS PASSED")

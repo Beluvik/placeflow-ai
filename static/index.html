@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PlaceFlow AI — Resume-to-JD Verification &amp; Auto-Router</title>
+  <title>PlaceFlow AI — College, HR &amp; Student Placement Suite</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -19,34 +19,15 @@
     };
   </script>
   <style>
-    @keyframes dashFlow {
-      to { stroke-dashoffset: -24; }
-    }
-    .svg-flow-line {
-      stroke-dasharray: 6 6;
-      transition: stroke 200ms ease, opacity 200ms ease;
-    }
-    .svg-flow-active {
-      animation: dashFlow 0.7s linear infinite;
-    }
-    .interactive-btn {
-      transition: transform 130ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease;
-    }
-    .interactive-btn:hover:not(:disabled) {
-      transform: translateY(-1px);
-    }
-    .interactive-btn:active:not(:disabled) {
-      transform: translateY(0px) scale(0.975);
-    }
-    .interactive-card {
-      transition: transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 150ms ease, border-color 150ms ease;
-    }
-    .interactive-card:hover {
-      transform: translateY(-2px);
-    }
-    .drawer-enter {
-      transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
-    }
+    @keyframes dashFlow { to { stroke-dashoffset: -24; } }
+    .svg-flow-line { stroke-dasharray: 6 6; transition: stroke 200ms ease, opacity 200ms ease; }
+    .svg-flow-active { animation: dashFlow 0.7s linear infinite; }
+    .interactive-btn { transition: transform 130ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease; }
+    .interactive-btn:hover:not(:disabled) { transform: translateY(-1px); }
+    .interactive-btn:active:not(:disabled) { transform: translateY(0px) scale(0.975); }
+    .interactive-card { transition: transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 150ms ease, border-color 150ms ease; }
+    .interactive-card:hover { transform: translateY(-2px); }
+    .drawer-enter { transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1); }
   </style>
 </head>
 <body class="bg-stone-50 text-stone-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased min-h-screen transition-colors">
@@ -54,8 +35,6 @@
   <!-- Sticky Top Command Header -->
   <header class="sticky top-0 z-30 border-b border-stone-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-
-      <!-- Brand Mark -->
       <div class="flex items-center gap-3 min-w-0">
         <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm tracking-tight shrink-0 shadow-sm">
           PF
@@ -68,37 +47,44 @@
             </span>
           </div>
           <p class="text-[11px] text-stone-500 dark:text-zinc-400 truncate hidden md:block">
-            Campus Automation · Gemini-Powered Placement Router
+            Campus Automation · College ERP · HR Credibility · Proctored Skill Verification
           </p>
         </div>
       </div>
 
-      <!-- Segmented Navigation Tabs (Role-Scoped) -->
-      <nav id="main-nav" class="hidden items-center gap-1 p-1 rounded-xl bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800">
+      <!-- Role-Scoped Navigation -->
+      <nav id="main-nav" class="hidden items-center gap-1 p-1 rounded-xl bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 overflow-x-auto">
+        <!-- College Tabs -->
         <button onclick="switchTab('router')" id="tab-btn-router"
           class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10"/></svg>
           <span>Auto-Router</span>
-          <span id="badge-processed-count" class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">0</span>
+          <span id="badge-processed-count" class="px-1.5 rounded-full text-[10px] font-mono bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">0</span>
+        </button>
+        <button onclick="switchTab('analytics')" id="tab-btn-analytics"
+          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-zinc-400">
+          <span>Branch Stats &amp; ERP</span>
         </button>
         <button onclick="switchTab('actions')" id="tab-btn-actions"
-          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0-3-3m3 3 3-3M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-          <span>HR Export &amp; Emails</span>
+          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-zinc-400">
+          <span>Exports &amp; Emails</span>
         </button>
+        <!-- HR Tab -->
+        <button onclick="switchTab('hr')" id="tab-btn-hr"
+          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-zinc-400">
+          <span>HR Credibility Portal</span>
+        </button>
+        <!-- Student Tab -->
         <button onclick="switchTab('student')" id="tab-btn-student"
-          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.1a7.5 7.5 0 0 1 15 0"/></svg>
+          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-zinc-400">
           <span>My Student Portal</span>
         </button>
       </nav>
 
-      <!-- Right Controls: Role Pill + Gemini Key + Sign Out + Theme Toggle -->
       <div class="flex items-center gap-2 shrink-0">
         <span id="role-badge" class="hidden items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border border-stone-200 dark:border-zinc-800 bg-stone-100 dark:bg-zinc-900 text-stone-700 dark:text-zinc-300"></span>
 
         <button onclick="openKeyModal()" id="api-key-pill"
-          class="hidden interactive-btn items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border cursor-pointer bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50">
+          class="hidden interactive-btn items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border cursor-pointer bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300">
           <span id="api-key-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
           <span id="api-key-label">Set Gemini Key</span>
         </button>
@@ -108,7 +94,7 @@
           Sign Out
         </button>
 
-        <button onclick="toggleTheme()" id="theme-toggle-btn" title="Switch Light / Dark Mode"
+        <button onclick="toggleTheme()" title="Switch Light / Dark Mode"
           class="interactive-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-stone-100 dark:hover:bg-zinc-800 text-xs font-medium cursor-pointer">
           <svg class="w-4 h-4 hidden dark:block text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32 1.41-1.41"/></svg>
           <svg class="w-4 h-4 block dark:hidden text-zinc-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/></svg>
@@ -120,138 +106,135 @@
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-    <!-- ==================== ROLE SIGN-IN GATE ==================== -->
-    <section id="auth-gate" class="max-w-4xl mx-auto py-6 space-y-6">
+    <!-- ==================== 3-PORTAL ROLE SIGN-IN GATE ==================== -->
+    <section id="auth-gate" class="max-w-6xl mx-auto py-4 space-y-6">
       <div class="text-center space-y-2">
         <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
-          ROLE-BASED ACCESS CONTROL · PLACEFLOW AI
+          3-PORTAL ROLE ISOLATION · COLLEGE · HR RECRUITER · STUDENT
         </span>
-        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Choose your Placement Cell Portal</h1>
-        <p class="text-xs sm:text-sm text-stone-600 dark:text-zinc-400 max-w-xl mx-auto">
-          Admins access batch verification, Auto-Router, cutoff waivers, and HR exports. Students access only their own verified status, upskilling roadmap, or rerouted drive.
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Sign in to your PlaceFlow AI Portal</h1>
+        <p class="text-xs sm:text-sm text-stone-600 dark:text-zinc-400 max-w-2xl mx-auto">
+          Separate workspaces and backend permissions for College Placement Cells, Company HR Teams, and Students.
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <!-- Admin Sign-In Card -->
-        <div class="interactive-card rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 space-y-4 shadow-xs">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-[11px] font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400">Coordinator Only</div>
-              <h2 class="text-base font-semibold mt-0.5">Placement Admin Console</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <!-- College Login Card -->
+        <div class="interactive-card rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4 shadow-xs flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-[11px] font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400">College Admin</div>
+                <h2 class="text-base font-semibold mt-0.5">Placement Cell Portal</h2>
+              </div>
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300">ERP + Stats</span>
             </div>
-            <span class="px-2 py-0.5 rounded-md text-[11px] font-mono bg-stone-100 dark:bg-zinc-800">Auto-Router</span>
-          </div>
-          <div class="space-y-2.5 text-xs">
-            <div>
-              <label class="block font-medium mb-1">Admin Email</label>
-              <input id="login-admin-email" type="email" value="admin@rit.edu"
+            <p class="text-[11px] text-stone-500 dark:text-zinc-400">
+              Batch Auto-Router, College ERP CGPA/Sem check, branchwise acceptance rates, and waiver approvals.
+            </p>
+            <div class="space-y-2 text-xs">
+              <input id="login-college-email" type="email" value="admin@rit.edu" placeholder="admin@rit.edu"
+                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
+              <input id="login-college-pass" type="password" value="RIT-COLLEGE-2026" placeholder="Passcode"
                 class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
             </div>
-            <div>
-              <label class="block font-medium mb-1">Admin Passcode</label>
-              <input id="login-admin-pass" type="password" value="RIT-ADMIN-2026"
-                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
-            </div>
           </div>
-          <div class="flex items-center justify-between gap-2 pt-1">
-            <button onclick="fillAdminDemo()" class="interactive-btn px-3 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 text-xs font-medium cursor-pointer">
-              Fill Demo
-            </button>
-            <button onclick="loginAs('admin')" class="interactive-btn flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer">
-              Sign In as Admin →
-            </button>
-          </div>
+          <button onclick="loginAs('college')" class="interactive-btn w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer">
+            Sign In as College →
+          </button>
         </div>
 
-        <!-- Student Sign-In Card -->
-        <div class="interactive-card rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 space-y-4 shadow-xs">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-[11px] font-mono uppercase tracking-wider text-teal-600 dark:text-teal-400">Student Only</div>
-              <h2 class="text-base font-semibold mt-0.5">Student Placement Portal</h2>
+        <!-- HR Login Card -->
+        <div class="interactive-card rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4 shadow-xs flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-[11px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Recruiter Only</div>
+                <h2 class="text-base font-semibold mt-0.5">HR Talent &amp; Credibility</h2>
+              </div>
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">Trust Score</span>
             </div>
-            <span class="px-2 py-0.5 rounded-md text-[11px] font-mono bg-stone-100 dark:bg-zinc-800">Private View</span>
+            <p class="text-[11px] text-stone-500 dark:text-zinc-400">
+              Inspect shortlisted candidates with 0–100 Credibility Scores, ERP academic trust, and proctored test badges.
+            </p>
+            <div class="space-y-2 text-xs">
+              <input id="login-hr-email" type="email" value="hr@cloudbackend.com" placeholder="hr@company.com"
+                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
+              <input id="login-hr-pass" type="password" value="RIT-HR-2026" placeholder="Passcode"
+                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
+            </div>
           </div>
-          <div class="space-y-2.5 text-xs">
-            <div>
-              <label class="block font-medium mb-1">Student College Email</label>
-              <input id="login-student-email" type="email" value="kiran.gowda@rit.edu"
-                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
+          <button onclick="loginAs('hr')" class="interactive-btn w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer">
+            Sign In as HR Recruiter →
+          </button>
+        </div>
+
+        <!-- Student Login Card -->
+        <div class="interactive-card rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4 shadow-xs flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-[11px] font-mono uppercase tracking-wider text-teal-600 dark:text-teal-400">Student Only</div>
+                <h2 class="text-base font-semibold mt-0.5">Student Placement Portal</h2>
+              </div>
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300">AI Test + Prep</span>
             </div>
-            <div>
-              <label class="block font-medium mb-1">Student Passcode</label>
-              <input id="login-student-pass" type="password" value="RIT-STUDENT-2026"
+            <p class="text-[11px] text-stone-500 dark:text-zinc-400">
+              Browse JDs, prepare with YouTube courses, and prove lacking skills via webcam/mic proctored AI tests.
+            </p>
+            <div class="space-y-2 text-xs">
+              <input id="login-student-email" type="email" value="ananya.rao@rit.edu" placeholder="student@rit.edu"
                 class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
-            </div>
-            <div class="flex flex-wrap gap-1 pt-0.5">
-              <span class="text-[11px] text-stone-400 mr-1 self-center">Quick select:</span>
-              <button onclick="pickDemoStudent('aarav.sharma@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Aarav</button>
-              <button onclick="pickDemoStudent('kiran.gowda@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Kiran</button>
-              <button onclick="pickDemoStudent('ananya.rao@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Ananya</button>
-              <button onclick="pickDemoStudent('rohan.verma@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Rohan</button>
-              <button onclick="pickDemoStudent('meera.nair@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Meera</button>
+              <input id="login-student-pass" type="password" value="RIT-STUDENT-2026" placeholder="Passcode"
+                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
+              <div class="flex flex-wrap gap-1 pt-0.5">
+                <button onclick="pickDemoStudent('aarav.sharma@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Aarav</button>
+                <button onclick="pickDemoStudent('kiran.gowda@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Kiran</button>
+                <button onclick="pickDemoStudent('ananya.rao@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Ananya</button>
+                <button onclick="pickDemoStudent('rohan.verma@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Rohan</button>
+                <button onclick="pickDemoStudent('meera.nair@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Meera</button>
+              </div>
             </div>
           </div>
           <button onclick="loginAs('student')" class="interactive-btn w-full py-2.5 px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-semibold cursor-pointer">
-            Sign In to Student Portal →
+            Sign In as Student →
           </button>
         </div>
       </div>
     </section>
 
-    <!-- ==================== TAB 1: BATCH AUTO-ROUTER ==================== -->
+    <!-- ==================== COLLEGE TAB 1: AUTO-ROUTER ==================== -->
     <section id="tab-router" class="hidden space-y-6">
-
-      <!-- Hero Command Banner + Interactive Keyword Explainer + 1-to-3 Lane Diagram -->
       <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 shadow-xs space-y-5">
         <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div class="space-y-2 max-w-2xl">
             <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[11px] font-semibold">
-              <span>AUTOMATED PLACEMENT WORKFLOW · NOT A PROMPT WRAPPER</span>
+              <span>COLLEGE PLACEMENT CELL · ERP-VERIFIED AUTO-ROUTER</span>
             </div>
             <h1 class="text-xl sm:text-2xl font-bold tracking-tight">
-              Verify resume proof. Catch buzzword bluffing. Auto-route every student.
+              Verify resume proof &amp; College ERP data. Catch buzzwords. Auto-route every student.
             </h1>
             <p class="text-xs sm:text-sm text-stone-600 dark:text-zinc-400">
-              Batch-screen student PDFs against company JDs using <strong class="text-stone-900 dark:text-zinc-100">Gemini Structured JSON</strong> + <strong class="text-stone-900 dark:text-zinc-100">Deterministic Cutoff Rules</strong>.
+              Uses <strong class="text-stone-900 dark:text-zinc-100">Gemini Structured JSON</strong> + <strong class="text-stone-900 dark:text-zinc-100">College ERP CGPA/Sem Verification</strong> + <strong class="text-stone-900 dark:text-zinc-100">4-Track Routing</strong>.
             </p>
           </div>
-
-          <!-- Interactive Keyword Pills -->
           <div class="flex flex-wrap gap-1.5 lg:justify-end">
-            <button onclick="selectKeyword('pdf')" data-kw="pdf"
-              class="kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer border-blue-500 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300">
-              Multimodal PDF Audit
-            </button>
-            <button onclick="selectKeyword('proof')" data-kw="proof"
-              class="kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-stone-700 dark:text-zinc-300">
-              Buzzword Detector
-            </button>
-            <button onclick="selectKeyword('rules')" data-kw="rules"
-              class="kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-stone-700 dark:text-zinc-300">
-              Deterministic Cutoffs
-            </button>
-            <button onclick="selectKeyword('reroute')" data-kw="reroute"
-              class="kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-stone-700 dark:text-zinc-300">
-              Cross-JD Auto-Router
-            </button>
+            <button onclick="selectKeyword('pdf')" data-kw="pdf" class="kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer border-blue-500 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300">Multimodal PDF Audit</button>
+            <button onclick="selectKeyword('erp')" data-kw="erp" class="kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950">College ERP Check</button>
+            <button onclick="selectKeyword('proof')" data-kw="proof" class="kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950">Buzzword Detector</button>
+            <button onclick="selectKeyword('reroute')" data-kw="reroute" class="kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950">4-Track Auto-Router</button>
           </div>
         </div>
 
-        <!-- Interactive Keyword Explainer Strip -->
         <div id="kw-explainer" class="px-3.5 py-2.5 rounded-xl bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 text-xs flex items-center justify-between gap-3 flex-wrap">
           <span id="kw-text" class="text-stone-700 dark:text-zinc-300">
             <strong class="text-blue-600 dark:text-blue-400">Multimodal PDF Audit:</strong> Sends raw multi-column resume PDFs directly to Gemini — no broken text scraping.
           </span>
-          <span id="pipeline-status-text" class="font-mono text-[11px] text-stone-500 dark:text-zinc-400">
-            Status: Ready
-          </span>
+          <span id="pipeline-status-text" class="font-mono text-[11px] text-stone-500 dark:text-zinc-400">Status: Ready</span>
         </div>
 
-        <!-- Interactive 1-Input -> Processor -> 3-Lane Diagram (Click Lanes to Filter!) -->
+        <!-- 1 -> Processor -> 4 Clickable Output Lanes -->
         <div class="grid grid-cols-1 lg:grid-cols-11 items-center gap-3 pt-1">
-          <!-- Input Node -->
           <div id="diag-input" class="lg:col-span-2 interactive-card rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 p-3.5">
             <div class="flex items-center justify-between">
               <span class="text-[10px] font-mono uppercase tracking-wider text-stone-400">Input</span>
@@ -261,24 +244,21 @@
             <div class="text-[11px] text-stone-500 dark:text-zinc-400">PDFs + Company JD</div>
           </div>
 
-          <!-- Connector 1 -->
           <div class="hidden lg:flex lg:col-span-1 items-center justify-center">
             <svg class="w-full h-6" viewBox="0 0 80 24" fill="none">
               <path id="flow-path-in" d="M2 12 H78" stroke="currentColor" stroke-width="2" class="svg-flow-line text-stone-300 dark:text-zinc-700" />
             </svg>
           </div>
 
-          <!-- Main Processor Node -->
           <div id="diag-proc" class="lg:col-span-3 interactive-card rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 p-3.5">
             <div class="flex items-center justify-between">
-              <span class="text-[10px] font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400">Dual Engine</span>
-              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800">JSON Schema</span>
+              <span class="text-[10px] font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400">Triple Check</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800">Gemini + ERP</span>
             </div>
-            <div class="text-xs font-semibold mt-1">Gemini Proof Audit + Cutoff Rules</div>
-            <div class="text-[11px] text-stone-500 dark:text-zinc-400">Checks project evidence &amp; CGPA/branch/backlogs</div>
+            <div class="text-xs font-semibold mt-1">Proof Audit + ERP CGPA/Sem + Rules</div>
+            <div class="text-[11px] text-stone-500 dark:text-zinc-400">Verifies skills &amp; official academic records</div>
           </div>
 
-          <!-- Branching Connector SVG (4 Lanes) -->
           <div class="hidden lg:flex lg:col-span-1 items-center justify-center">
             <svg class="w-full h-44" viewBox="0 0 80 176" fill="none">
               <path id="flow-path-1" d="M2 88 C36 88, 40 20, 78 20" stroke="currentColor" stroke-width="2" class="svg-flow-line text-emerald-400/70" />
@@ -288,19 +268,18 @@
             </svg>
           </div>
 
-          <!-- 4 Clickable Output Lanes -->
           <div class="lg:col-span-4 space-y-1.5">
             <button onclick="setFilter('SHORTLISTED')" id="lane-SHORTLISTED"
-              class="interactive-btn w-full text-left px-3 py-2 rounded-xl border border-emerald-200 dark:border-emerald-900/70 bg-emerald-50/60 dark:bg-emerald-950/30 flex items-center justify-between gap-2 cursor-pointer hover:border-emerald-400">
+              class="interactive-btn w-full text-left px-3 py-2 rounded-xl border border-emerald-200 dark:border-emerald-900/70 bg-emerald-50/60 dark:bg-emerald-950/30 flex items-center justify-between gap-2 cursor-pointer">
               <div>
                 <div class="text-xs font-semibold text-emerald-800 dark:text-emerald-300">Lane 1 · Auto-Shortlisted</div>
-                <div class="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">Ready for HR CSV packet</div>
+                <div class="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">Sent to HR Credibility Portal</div>
               </div>
               <span id="lane-count-SHORTLISTED" class="text-sm font-mono font-bold text-emerald-700 dark:text-emerald-300 tabular-nums">0</span>
             </button>
 
             <button onclick="setFilter('PORTFOLIO_EXCEPTION')" id="lane-PORTFOLIO_EXCEPTION"
-              class="interactive-btn w-full text-left px-3 py-2 rounded-xl border border-teal-200 dark:border-teal-900/70 bg-teal-50/60 dark:bg-teal-950/30 flex items-center justify-between gap-2 cursor-pointer hover:border-teal-400">
+              class="interactive-btn w-full text-left px-3 py-2 rounded-xl border border-teal-200 dark:border-teal-900/70 bg-teal-50/60 dark:bg-teal-950/30 flex items-center justify-between gap-2 cursor-pointer">
               <div>
                 <div class="text-xs font-semibold text-teal-800 dark:text-teal-300">Lane 2 · Portfolio Exception</div>
                 <div class="text-[11px] text-teal-700/80 dark:text-teal-400/80">Cutoff missed, strong projects → Waiver</div>
@@ -309,16 +288,16 @@
             </button>
 
             <button onclick="setFilter('UPSKILL_TRACK')" id="lane-UPSKILL_TRACK"
-              class="interactive-btn w-full text-left px-3 py-2 rounded-xl border border-amber-200 dark:border-amber-900/70 bg-amber-50/60 dark:bg-amber-950/30 flex items-center justify-between gap-2 cursor-pointer hover:border-amber-400">
+              class="interactive-btn w-full text-left px-3 py-2 rounded-xl border border-amber-200 dark:border-amber-900/70 bg-amber-50/60 dark:bg-amber-950/30 flex items-center justify-between gap-2 cursor-pointer">
               <div>
                 <div class="text-xs font-semibold text-amber-800 dark:text-amber-300">Lane 3 · Skill-Gap &amp; Buzzword</div>
-                <div class="text-[11px] text-amber-700/80 dark:text-amber-400/80">Assigned 7-day proof roadmap</div>
+                <div class="text-[11px] text-amber-700/80 dark:text-amber-400/80">YouTube courses + AI Proctored Test</div>
               </div>
               <span id="lane-count-UPSKILL_TRACK" class="text-sm font-mono font-bold text-amber-700 dark:text-amber-300 tabular-nums">0</span>
             </button>
 
             <button onclick="setFilter('REROUTED')" id="lane-REROUTED"
-              class="interactive-btn w-full text-left px-3 py-2 rounded-xl border border-sky-200 dark:border-sky-900/70 bg-sky-50/60 dark:bg-sky-950/30 flex items-center justify-between gap-2 cursor-pointer hover:border-sky-400">
+              class="interactive-btn w-full text-left px-3 py-2 rounded-xl border border-sky-200 dark:border-sky-900/70 bg-sky-50/60 dark:bg-sky-950/30 flex items-center justify-between gap-2 cursor-pointer">
               <div>
                 <div class="text-xs font-semibold text-sky-800 dark:text-sky-300">Lane 4 · Cross-JD Auto-Reroute</div>
                 <div class="text-[11px] text-sky-700/80 dark:text-sky-400/80">Matched to eligible open drives</div>
@@ -329,115 +308,74 @@
         </div>
       </div>
 
-      <!-- Main 2-Column Workspace -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-        <!-- Left Control Panel -->
         <aside class="lg:col-span-4 space-y-4">
-
-          <!-- Target JD Picker -->
           <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-3">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400">
-                1. Pick Company JD
-              </span>
-              <button onclick="openJDModal()"
-                class="interactive-btn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 hover:border-blue-500 cursor-pointer">
-                <span>+ Add Custom JD</span>
-              </button>
+              <span class="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400">1. Pick Company JD</span>
+              <button onclick="openJDModal()" class="interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 cursor-pointer">+ Add Custom JD</button>
             </div>
             <div id="jd-list" class="space-y-2"></div>
           </div>
 
-          <!-- Resume Batch Upload & Run Controls -->
           <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-3">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400">
-                2. Upload Student PDFs
-              </span>
-              <button onclick="clearQueue()" id="clear-queue-btn"
-                class="interactive-btn text-xs font-medium text-stone-500 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer hidden">
-                Clear All
-              </button>
+              <span class="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400">2. Upload Student PDFs</span>
+              <button onclick="clearQueue()" id="clear-queue-btn" class="text-xs font-medium text-stone-500 hover:text-rose-600 cursor-pointer hidden">Clear All</button>
             </div>
 
-            <label id="dropzone"
-              class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 p-4 text-center cursor-pointer hover:border-blue-500 transition">
-              <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 mb-1.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
-              </svg>
+            <label id="dropzone" class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 p-4 text-center cursor-pointer hover:border-blue-500 transition">
               <span class="text-xs font-semibold">Drop Student Resumes (.pdf)</span>
               <span class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">or click to browse multiple files</span>
               <input id="pdf-file-input" type="file" accept=".pdf" multiple class="hidden" onchange="handleFileInput(this.files)" />
             </label>
 
-            <button onclick="loadDemoPDFs()" id="load-demo-btn"
-              class="interactive-btn w-full py-2.5 px-3 rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/70 hover:bg-stone-100 dark:hover:bg-zinc-800 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer">
-              <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z"/></svg>
-              <span>Load 5 Sample RIT PDFs</span>
+            <button onclick="loadDemoPDFs()" id="load-demo-btn" class="interactive-btn w-full py-2.5 px-3 rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/70 text-xs font-semibold cursor-pointer">
+              Load 5 Sample RIT PDFs
             </button>
 
             <div id="queued-files-list" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
 
-            <button onclick="runBatchPipeline()" id="run-pipeline-btn"
-              class="interactive-btn w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
-              <svg id="run-icon" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v11.78a1.5 1.5 0 0 0 2.3 1.27l9.344-5.891a1.5 1.5 0 0 0 0-2.538L6.3 2.841Z"/></svg>
+            <button onclick="runBatchPipeline()" id="run-pipeline-btn" class="interactive-btn w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-50 shadow-sm">
               <span id="run-btn-label">Verify &amp; Route Batch</span>
             </button>
           </div>
 
-          <!-- Pipeline Execution Log -->
           <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400">
-                Live Audit Log
-              </span>
-              <button onclick="document.getElementById('exec-log').innerHTML=''" class="text-[11px] text-stone-400 hover:text-stone-700 dark:hover:text-zinc-200 cursor-pointer">
-                Clear
-              </button>
+              <span class="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400">Live Audit Log</span>
+              <button onclick="document.getElementById('exec-log').innerHTML=''" class="text-[11px] text-stone-400 cursor-pointer">Clear</button>
             </div>
             <div id="exec-log" class="space-y-1.5 text-[11px] font-mono text-stone-600 dark:text-zinc-400 max-h-44 overflow-y-auto">
-              <div>[ready] Server online. Click "Load 5 Sample RIT PDFs" to begin.</div>
+              <div>[ready] College Admin ready. Load 5 Sample RIT PDFs to verify.</div>
             </div>
           </div>
         </aside>
 
-        <!-- Right Results Table -->
         <div class="lg:col-span-8 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-5 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h2 class="text-sm font-semibold">Auto-Routed Candidates</h2>
-              <p class="text-xs text-stone-500 dark:text-zinc-400">
-                Click any row to inspect project proof vs. buzzword claims.
-              </p>
+              <p class="text-xs text-stone-500 dark:text-zinc-400">Includes live College ERP CGPA/Sem check &amp; HR Credibility score.</p>
             </div>
-
-            <!-- Search + Interactive Filter Pills -->
             <div class="flex items-center gap-2 flex-wrap">
-              <input id="search-input" oninput="renderResults()" type="text" placeholder="Search student or skill..."
-                class="rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-500" />
+              <input id="search-input" oninput="renderResults()" type="text" placeholder="Search name, branch, skill..."
+                class="rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-2.5 py-1.5 text-xs" />
               <div class="flex items-center gap-1 flex-wrap">
                 <button onclick="setFilter('ALL')" data-pill="ALL" class="filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-zinc-900 dark:bg-white text-white dark:text-zinc-900">All (<span id="pill-count-ALL">0</span>)</button>
-                <button onclick="setFilter('SHORTLISTED')" data-pill="SHORTLISTED" class="filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-300">Shortlisted</button>
-                <button onclick="setFilter('PORTFOLIO_EXCEPTION')" data-pill="PORTFOLIO_EXCEPTION" class="filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-300">Exception</button>
-                <button onclick="setFilter('UPSKILL_TRACK')" data-pill="UPSKILL_TRACK" class="filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-300">Upskill</button>
-                <button onclick="setFilter('REROUTED')" data-pill="REROUTED" class="filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-300">Rerouted</button>
+                <button onclick="setFilter('SHORTLISTED')" data-pill="SHORTLISTED" class="filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border border-stone-200 dark:border-zinc-700">Shortlisted</button>
+                <button onclick="setFilter('PORTFOLIO_EXCEPTION')" data-pill="PORTFOLIO_EXCEPTION" class="filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border border-stone-200 dark:border-zinc-700">Exception</button>
+                <button onclick="setFilter('UPSKILL_TRACK')" data-pill="UPSKILL_TRACK" class="filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border border-stone-200 dark:border-zinc-700">Upskill</button>
+                <button onclick="setFilter('REROUTED')" data-pill="REROUTED" class="filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer border border-stone-200 dark:border-zinc-700">Rerouted</button>
               </div>
             </div>
           </div>
 
           <div id="empty-results-state" class="rounded-xl border border-dashed border-stone-300 dark:border-zinc-700 p-8 text-center space-y-3">
-            <div class="text-sm font-semibold">Ready to verify your first batch</div>
-            <p class="text-xs text-stone-500 dark:text-zinc-400 max-w-md mx-auto">
-              Start in 2 clicks: load the 5 realistic RIT student PDFs, then hit <strong>Verify &amp; Route Batch</strong>.
-            </p>
+            <div class="text-sm font-semibold">No resumes evaluated yet</div>
             <div class="flex items-center justify-center gap-2 flex-wrap">
-              <button onclick="loadDemoPDFs()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 text-xs font-semibold cursor-pointer">
-                1. Load 5 RIT PDFs
-              </button>
-              <button onclick="runBatchPipeline()" class="interactive-btn px-3.5 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold cursor-pointer">
-                2. Verify &amp; Route Batch
-              </button>
+              <button onclick="loadDemoPDFs()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 text-xs font-semibold cursor-pointer">1. Load 5 RIT PDFs</button>
+              <button onclick="runBatchPipeline()" class="interactive-btn px-3.5 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold cursor-pointer">2. Verify &amp; Route Batch</button>
             </div>
           </div>
 
@@ -446,7 +384,7 @@
               <thead>
                 <tr class="border-b border-stone-200 dark:border-zinc-800 text-stone-500 dark:text-zinc-400">
                   <th class="py-2.5 pr-3 font-medium">Student</th>
-                  <th class="py-2.5 px-2 font-medium">Academics</th>
+                  <th class="py-2.5 px-2 font-medium">ERP &amp; Academics</th>
                   <th class="py-2.5 px-2 font-medium">Skill Proof</th>
                   <th class="py-2.5 px-2 font-medium">Auto-Route</th>
                   <th class="py-2.5 pl-2 font-medium text-right">Actions</th>
@@ -459,124 +397,260 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 2: HR EXPORT & EMAILS ==================== -->
+    <!-- ==================== COLLEGE TAB 2: BRANCH ANALYTICS & ERP VERIFIER ==================== -->
+    <section id="tab-analytics" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Branchwise Acceptance Rate & Shortlist Table -->
+        <div class="lg:col-span-7 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <h2 class="text-sm font-semibold">Branchwise Resume Acceptance Rate &amp; Shortlists</h2>
+              <p class="text-xs text-stone-500 dark:text-zinc-400">Live breakdown across branches with shortlist filtering.</p>
+            </div>
+            <button onclick="loadCollegeAnalytics()" class="interactive-btn px-3 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 text-xs font-medium cursor-pointer">↻ Refresh</button>
+          </div>
+
+          <div id="branch-stats-bars" class="space-y-3 text-xs"></div>
+
+          <div class="pt-3 border-t border-stone-200 dark:border-zinc-800 space-y-3">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <span class="text-xs font-semibold">Shortlisted Students by Branch</span>
+              <select id="analytics-branch-filter" onchange="renderBranchShortlist()" class="rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-2.5 py-1 text-xs">
+                <option value="ALL">All Branches</option>
+                <option value="CSE">CSE</option>
+                <option value="ISE">ISE</option>
+                <option value="ECE">ECE</option>
+                <option value="AIML">AIML</option>
+              </select>
+            </div>
+            <div id="branch-shortlist-list" class="space-y-2 text-xs"></div>
+          </div>
+        </div>
+
+        <!-- Top Lacking Skills + Live College ERP CGPA/Sem Verifier -->
+        <div class="lg:col-span-5 space-y-6">
+          <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-3">
+            <h2 class="text-sm font-semibold">Personal Skills Students Are Lacking</h2>
+            <p class="text-xs text-stone-500 dark:text-zinc-400">Most frequent missing or unverified skills across evaluated resumes.</p>
+            <div id="lacking-skills-list" class="space-y-2 text-xs"></div>
+          </div>
+
+          <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <h2 class="text-sm font-semibold">College ERP CGPA &amp; Semester Verifier</h2>
+                <p class="text-xs text-stone-500 dark:text-zinc-400">Test resume tampering against the official RIT ERP DB.</p>
+              </div>
+              <button onclick="simulateTamperedERP()" class="interactive-btn px-2.5 py-1 rounded-lg border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-[11px] font-medium cursor-pointer">
+                Simulate Fake CGPA
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <input id="erp-email" type="email" value="kiran.gowda@rit.edu" placeholder="Student Email" class="col-span-2 rounded-lg border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-2.5 py-1.5 font-mono" />
+              <input id="erp-cgpa" type="number" step="0.01" value="7.25" placeholder="Resume CGPA" class="rounded-lg border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-2.5 py-1.5 font-mono" />
+              <input id="erp-sem" type="number" value="7" placeholder="Semester" class="rounded-lg border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-2.5 py-1.5 font-mono" />
+              <input id="erp-branch" type="text" value="ECE" placeholder="Branch" class="rounded-lg border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-2.5 py-1.5 font-mono" />
+              <input id="erp-backlogs" type="number" value="0" placeholder="Backlogs" class="rounded-lg border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-2.5 py-1.5 font-mono" />
+            </div>
+            <button onclick="runManualErpCheck()" class="interactive-btn w-full py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold cursor-pointer">
+              Verify Against College ERP DB
+            </button>
+            <div id="erp-check-result" class="text-xs"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== COLLEGE TAB 3: EXPORTS & EMAILS ==================== -->
     <section id="tab-actions" class="hidden space-y-6">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div class="lg:col-span-5 space-y-4">
-          <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4">
+        <div class="lg:col-span-5 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4">
+          <h2 class="text-sm font-semibold">Placement Coordinator Exports</h2>
+          <div class="p-4 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 flex items-center justify-between gap-3 flex-wrap">
             <div>
-              <h2 class="text-sm font-semibold">Placement Coordinator Exports</h2>
-              <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">
-                Clean recruiter spreadsheets and audit logs ready for company HR teams.
-              </p>
+              <div class="text-xs font-semibold">HR Shortlist Packet (.CSV)</div>
+              <div id="csv-count-sub" class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">0 verified shortlisted candidates</div>
             </div>
-
-            <div class="interactive-card p-4 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <div class="text-xs font-semibold">HR Shortlist Packet (.CSV)</div>
-                <div id="csv-count-sub" class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">0 verified shortlisted candidates</div>
-              </div>
-              <button onclick="downloadShortlistCSV()"
-                class="interactive-btn px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer">
-                Download CSV
-              </button>
+            <button onclick="downloadShortlistCSV()" class="interactive-btn px-3.5 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold cursor-pointer">Download CSV</button>
+          </div>
+          <div class="p-4 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div class="text-xs font-semibold">Full Batch Audit Log (.JSON)</div>
+              <div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">Includes ERP check, Credibility &amp; Gemini JSON</div>
             </div>
-
-            <div class="interactive-card p-4 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <div class="text-xs font-semibold">Full Batch Audit Log (.JSON)</div>
-                <div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">Includes Gemini proofs, flags &amp; routing verdicts</div>
-              </div>
-              <button onclick="downloadAuditJSON()"
-                class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-semibold cursor-pointer">
-                Download JSON
-              </button>
+            <button onclick="downloadAuditJSON()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-300 dark:border-zinc-700 text-xs font-semibold cursor-pointer">Download JSON</button>
+          </div>
+          <div class="p-4 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div class="text-xs font-semibold">Shortlisted Email List</div>
+              <div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">Copy verified addresses for BCC</div>
             </div>
-
-            <div class="interactive-card p-4 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <div class="text-xs font-semibold">Shortlisted Email List</div>
-                <div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">Copy verified addresses for BCC</div>
-              </div>
-              <button onclick="copyShortlistedEmails()"
-                class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-semibold cursor-pointer">
-                Copy Emails
-              </button>
-            </div>
+            <button onclick="copyShortlistedEmails()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-300 dark:border-zinc-700 text-xs font-semibold cursor-pointer">Copy Emails</button>
           </div>
         </div>
 
         <div class="lg:col-span-7 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4">
-          <div>
-            <h2 class="text-sm font-semibold">Auto-Generated Student Notifications</h2>
-            <p class="text-xs text-stone-500 dark:text-zinc-400">Copy any message or open directly in your Mac Mail app.</p>
-          </div>
-          <div id="email-queue" class="space-y-3 max-h-[460px] overflow-y-auto">
-            <div class="text-xs text-stone-500 dark:text-zinc-400 py-8 text-center">
-              Run the pipeline in Auto-Router to generate student notifications.
-            </div>
-          </div>
+          <h2 class="text-sm font-semibold">Auto-Generated Student Notifications</h2>
+          <div id="email-queue" class="space-y-3 max-h-[460px] overflow-y-auto"></div>
         </div>
       </div>
     </section>
 
-    <!-- ==================== TAB 3: STUDENT PORTAL VIEW (STUDENT-ONLY) ==================== -->
-    <section id="tab-student" class="hidden space-y-6">
+    <!-- ==================== HR PORTAL (HR-ONLY) ==================== -->
+    <section id="tab-hr" class="hidden space-y-6">
       <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 space-y-5">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-stone-200 dark:border-zinc-800 pb-4">
           <div>
-            <div class="text-[11px] font-mono uppercase tracking-wider text-teal-600 dark:text-teal-400">Private Student View</div>
-            <h2 class="text-base font-semibold mt-0.5">My Placement Status &amp; Action Plan</h2>
+            <div class="text-[11px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400">HR Recruiter Portal</div>
+            <h2 class="text-lg font-semibold mt-0.5">Verified Talent Shortlist &amp; Credibility Intelligence</h2>
             <p class="text-xs text-stone-500 dark:text-zinc-400">
-              Only your own verified application status is visible here. Admin routing and other students' records are hidden.
+              Review College ERP academic verification, project proof ratio, AI-proctored skill tests, and 0–100 Credibility Scores.
             </p>
           </div>
-          <button onclick="loadStudentPortal()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 text-xs font-semibold cursor-pointer self-start sm:self-auto">
-            ↻ Refresh My Status
+          <div class="flex items-center gap-2 flex-wrap">
+            <select id="hr-branch-filter" onchange="loadHrPortal()" class="rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 text-xs">
+              <option value="ALL">All Branches</option>
+              <option value="CSE">CSE</option>
+              <option value="ISE">ISE</option>
+              <option value="ECE">ECE</option>
+              <option value="AIML">AIML</option>
+            </select>
+            <label class="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 cursor-pointer">
+              <input id="hr-include-all" type="checkbox" onchange="loadHrPortal()" class="accent-emerald-600" />
+              <span>Include All Screened</span>
+            </label>
+            <button onclick="downloadHrCSV()" class="interactive-btn px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer">
+              Download HR CSV
+            </button>
+          </div>
+        </div>
+
+        <div id="hr-candidates-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+    </section>
+
+    <!-- ==================== STUDENT PORTAL (STUDENT-ONLY) ==================== -->
+    <section id="tab-student" class="hidden space-y-6">
+      <!-- Personal ERP & Placement Status -->
+      <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-stone-200 dark:border-zinc-800 pb-4">
+          <div>
+            <div class="text-[11px] font-mono uppercase tracking-wider text-teal-600 dark:text-teal-400">Private Student Portal</div>
+            <h2 class="text-base font-semibold mt-0.5">My Placement Status, Roadmaps &amp; Verified Credentials</h2>
+            <p class="text-xs text-stone-500 dark:text-zinc-400">
+              Only your personal status and ERP profile are visible here.
+            </p>
+          </div>
+          <button onclick="loadStudentPortal()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 text-xs font-semibold cursor-pointer">
+            ↻ Refresh Status
           </button>
         </div>
 
-        <div id="student-portal-body">
-          <div class="text-xs text-stone-500 dark:text-zinc-400 py-8 text-center">
-            Loading your placement status...
-          </div>
+        <div id="student-erp-banner"></div>
+        <div id="student-portal-body"></div>
+      </div>
+
+      <!-- Opportunities + Prepare for a Specific JD -->
+      <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 space-y-4">
+        <div>
+          <h2 class="text-base font-semibold">Campus Opportunities &amp; JD Preparation</h2>
+          <p class="text-xs text-stone-500 dark:text-zinc-400">
+            View full JDs, pick any company drive to prepare for with YouTube courses, and take a webcam/mic-proctored AI skill test to verify lacking skills.
+          </p>
         </div>
+        <div id="student-opportunities-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+        <div id="student-jd-prep-box" class="hidden"></div>
       </div>
     </section>
   </main>
 
-  <!-- ==================== SLIDE-OVER CANDIDATE DOSSIER DRAWER ==================== -->
+  <!-- ==================== ADMIN DOSSIER DRAWER ==================== -->
   <div id="drawer-backdrop" onclick="closeDrawer()" class="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] hidden"></div>
   <aside id="dossier-drawer"
     class="drawer-enter fixed top-0 right-0 z-50 h-full w-full max-w-2xl bg-white dark:bg-zinc-950 border-l border-stone-200 dark:border-zinc-800 shadow-2xl translate-x-full flex flex-col">
     <div class="px-5 py-4 border-b border-stone-200 dark:border-zinc-800 flex items-center justify-between gap-3">
       <div class="min-w-0">
         <div class="text-[11px] font-mono uppercase tracking-wider text-stone-400">Verification Dossier</div>
-        <h3 id="drawer-title" class="text-base font-semibold truncate">Candidate Name</h3>
+        <h3 id="drawer-title" class="text-base font-semibold truncate">Candidate</h3>
       </div>
       <div class="flex items-center gap-1.5 shrink-0">
-        <button onclick="stepDrawer(-1)" class="interactive-btn px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-800 text-xs hover:bg-stone-100 dark:hover:bg-zinc-900 cursor-pointer">← Prev</button>
-        <button onclick="stepDrawer(1)" class="interactive-btn px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-800 text-xs hover:bg-stone-100 dark:hover:bg-zinc-900 cursor-pointer">Next →</button>
-        <button onclick="closeDrawer()" class="interactive-btn ml-1 p-1.5 rounded-lg border border-stone-200 dark:border-zinc-800 hover:bg-stone-100 dark:hover:bg-zinc-900 cursor-pointer" title="Close (Esc)">✕</button>
+        <button onclick="stepDrawer(-1)" class="interactive-btn px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-800 text-xs cursor-pointer">← Prev</button>
+        <button onclick="stepDrawer(1)" class="interactive-btn px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-800 text-xs cursor-pointer">Next →</button>
+        <button onclick="closeDrawer()" class="interactive-btn ml-1 p-1.5 rounded-lg border border-stone-200 dark:border-zinc-800 cursor-pointer">✕</button>
       </div>
     </div>
     <div id="drawer-content" class="flex-1 overflow-y-auto p-5 space-y-5 text-xs"></div>
   </aside>
+
+  <!-- ==================== SECURE AI-PROCTORED SKILL TEST MODAL ==================== -->
+  <div id="test-modal" class="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs hidden items-center justify-center p-4">
+    <div class="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between gap-3 border-b border-stone-200 dark:border-zinc-800 pb-3 flex-wrap">
+        <div>
+          <div class="text-[11px] font-mono uppercase tracking-wider text-rose-600 dark:text-rose-400">AI-Proctored Skill Verification</div>
+          <h3 id="test-modal-title" class="text-base font-semibold">Proctored Assessment</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="test-timer" class="px-2.5 py-1 rounded-lg bg-stone-100 dark:bg-zinc-800 font-mono text-xs font-bold">05:00</span>
+          <span id="test-tab-warns" class="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-mono text-xs">Tab Switches: 0</span>
+          <button onclick="closeTestModal()" class="px-2.5 py-1 rounded-lg border border-stone-200 dark:border-zinc-700 text-xs cursor-pointer">Exit</button>
+        </div>
+      </div>
+
+      <!-- Live Webcam + Mic Proctoring Bar -->
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center p-3 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950">
+        <div class="sm:col-span-4">
+          <video id="proctor-video" autoplay muted playsinline class="w-full h-28 object-cover rounded-lg bg-zinc-900 border border-stone-300 dark:border-zinc-700"></video>
+        </div>
+        <div class="sm:col-span-8 space-y-2 text-xs">
+          <div class="flex flex-wrap gap-2">
+            <span id="proctor-cam-badge" class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-200 dark:bg-zinc-800">Webcam: Checking...</span>
+            <span id="proctor-mic-badge" class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-200 dark:bg-zinc-800">Mic: Checking...</span>
+            <span id="test-source-badge" class="px-2 py-0.5 rounded-full text-[11px] font-mono bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300"></span>
+          </div>
+          <div>
+            <div class="text-[11px] text-stone-500 dark:text-zinc-400 mb-1">Live Microphone Audio Level</div>
+            <div class="w-full h-2 rounded-full bg-stone-200 dark:bg-zinc-800 overflow-hidden">
+              <div id="proctor-mic-meter" class="h-full bg-emerald-500 transition-all duration-100" style="width: 4%"></div>
+            </div>
+          </div>
+          <p class="text-[11px] text-stone-500 dark:text-zinc-400">
+            Pass mark: <strong>60%</strong> with &le; 2 tab switches. Passing verifies your lacking skills on your PlaceFlow profile &amp; boosts your HR Credibility Score.
+          </p>
+        </div>
+      </div>
+
+      <div id="test-questions-wrap" class="space-y-4"></div>
+      <div id="test-result-wrap" class="hidden"></div>
+
+      <div id="test-footer" class="flex justify-end gap-2 pt-2 border-t border-stone-200 dark:border-zinc-800">
+        <button onclick="closeTestModal()" class="interactive-btn px-4 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 text-xs font-medium cursor-pointer">Cancel</button>
+        <button onclick="submitProctoredTest()" id="submit-test-btn" class="interactive-btn px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold cursor-pointer">Submit Proctored Test</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== VIEW FULL JD MODAL ==================== -->
+  <div id="view-jd-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-4">
+    <div class="w-full max-w-lg rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 id="view-jd-title" class="text-base font-semibold">Job Description</h3>
+        <button onclick="closeViewJDModal()" class="cursor-pointer text-stone-400">✕</button>
+      </div>
+      <div id="view-jd-body" class="text-xs space-y-3"></div>
+    </div>
+  </div>
 
   <!-- ==================== GEMINI API KEY MODAL ==================== -->
   <div id="key-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-4">
     <div class="w-full max-w-md rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between">
         <h3 class="text-sm font-semibold">Configure Gemini API Key</h3>
-        <button onclick="closeKeyModal()" class="text-stone-400 hover:text-stone-700 dark:hover:text-zinc-200 cursor-pointer">✕</button>
+        <button onclick="closeKeyModal()" class="cursor-pointer text-stone-400">✕</button>
       </div>
-      <p class="text-xs text-stone-500 dark:text-zinc-400">
-        Stored locally in <code class="font-mono">.env</code> on your Mac and used only by your Python backend.
-      </p>
-      <input id="api-key-input" type="password" placeholder="AIzaSy..."
-        class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-600" />
+      <input id="api-key-input" type="password" placeholder="AIzaSy..." class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2.5 text-xs font-mono" />
       <div class="flex justify-end gap-2">
-        <button onclick="closeKeyModal()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 text-xs font-medium cursor-pointer">Cancel</button>
+        <button onclick="closeKeyModal()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 text-xs cursor-pointer">Cancel</button>
         <button onclick="saveApiKey()" class="interactive-btn px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold cursor-pointer">Save Key</button>
       </div>
     </div>
@@ -587,58 +661,36 @@
     <div class="w-full max-w-md rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-3 shadow-2xl">
       <div class="flex items-center justify-between">
         <h3 class="text-sm font-semibold">Add Custom Company JD</h3>
-        <button onclick="closeJDModal()" class="text-stone-400 hover:text-stone-700 dark:hover:text-zinc-200 cursor-pointer">✕</button>
+        <button onclick="closeJDModal()" class="cursor-pointer text-stone-400">✕</button>
       </div>
-      <div class="space-y-2.5 text-xs">
-        <div>
-          <label class="block font-medium mb-1">Company Name</label>
-          <input id="jd-company" type="text" placeholder="e.g., Razorpay" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
+      <div class="space-y-2 text-xs">
+        <input id="jd-company" type="text" placeholder="Company Name (e.g., Razorpay)" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
+        <div class="grid grid-cols-2 gap-2">
+          <input id="jd-role" type="text" placeholder="Role Title" class="rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
+          <input id="jd-ctc" type="text" placeholder="CTC / Stipend" class="rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block font-medium mb-1">Role Title</label>
-            <input id="jd-role" type="text" placeholder="Backend Intern" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
-          </div>
-          <div>
-            <label class="block font-medium mb-1">CTC / Stipend</label>
-            <input id="jd-ctc" type="text" placeholder="10 LPA" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
-          </div>
+          <input id="jd-cgpa" type="number" step="0.1" value="7.5" class="rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
+          <input id="jd-backlogs" type="number" value="0" class="rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
         </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block font-medium mb-1">Min CGPA</label>
-            <input id="jd-cgpa" type="number" step="0.1" value="7.5" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
-          </div>
-          <div>
-            <label class="block font-medium mb-1">Max Backlogs</label>
-            <input id="jd-backlogs" type="number" value="0" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
-          </div>
-        </div>
-        <div>
-          <label class="block font-medium mb-1">Allowed Branches (comma-separated)</label>
-          <input id="jd-branches" type="text" value="CSE, ISE, AIML" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
-        </div>
-        <div>
-          <label class="block font-medium mb-1">Must-Have Skills (comma-separated)</label>
-          <input id="jd-skills" type="text" value="Python, SQL, REST APIs, Git" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
-        </div>
+        <input id="jd-branches" type="text" value="CSE, ISE, AIML" placeholder="Branches" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
+        <input id="jd-skills" type="text" value="Python, SQL, REST APIs, Git" placeholder="Must-Have Skills" class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2" />
       </div>
       <div class="flex justify-end gap-2 pt-2">
-        <button onclick="closeJDModal()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 text-xs font-medium cursor-pointer">Cancel</button>
+        <button onclick="closeJDModal()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 text-xs cursor-pointer">Cancel</button>
         <button onclick="saveCustomJD()" class="interactive-btn px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold cursor-pointer">Save JD</button>
       </div>
     </div>
   </div>
 
-  <!-- Toast Container -->
   <div id="toast-wrap" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
 
   <script>
     const KEYWORD_COPY = {
       pdf: '<strong class="text-blue-600 dark:text-blue-400">Multimodal PDF Audit:</strong> Sends raw multi-column resume PDFs directly to Gemini — no broken text scraping.',
+      erp: '<strong class="text-blue-600 dark:text-blue-400">College ERP Check:</strong> Cross-verifies resume CGPA, Semester, Branch, and Backlogs directly against the official College ERP Database.',
       proof: '<strong class="text-blue-600 dark:text-blue-400">Buzzword Detector:</strong> Flags skills listed in headers that have zero supporting projects or internship evidence.',
-      rules: '<strong class="text-blue-600 dark:text-blue-400">Deterministic Cutoffs:</strong> Strict Python code verifies CGPA, branch, and backlogs so AI never guesses eligibility math.',
-      reroute: '<strong class="text-blue-600 dark:text-blue-400">Cross-JD Auto-Router:</strong> Automatically routes ineligible candidates to other open campus drives where they qualify.'
+      reroute: '<strong class="text-blue-600 dark:text-blue-400">4-Track Auto-Router:</strong> Routes into Shortlisted, Portfolio Exception Waiver, YouTube Upskill + AI Test, or Cross-JD Reroute.'
     };
 
     const state = {
@@ -648,47 +700,61 @@
       activeJdId: "cloud",
       queuedFiles: [],
       results: [],
-      studentRecords: [],
-      studentActiveJd: null,
+      hrCandidates: [],
+      studentData: null,
       filter: "ALL",
       drawerId: null,
-      isRunning: false
+      isRunning: false,
+      activeTest: null,
+      testStream: null,
+      testTimerId: null,
+      testStartedAt: 0,
+      tabSwitches: 0,
+      micAudioDetected: false
     };
 
     function apiFetch(url, options = {}) {
       const headers = Object.assign({}, options.headers || {});
-      if (state.token) {
-        headers["X-Session-Token"] = state.token;
-      }
+      if (state.token) headers["X-Session-Token"] = state.token;
       return fetch(url, Object.assign({}, options, { headers }));
     }
 
     async function init() {
       applySavedTheme();
       setupDropzone();
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeDrawer();
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && state.activeTest) {
+          state.tabSwitches += 1;
+          document.getElementById("test-tab-warns").textContent = `Tab Switches: ${state.tabSwitches}`;
+        }
       });
       await restoreSession();
     }
 
-    async function restoreSession() {
-      const health = await checkHealth();
-      if (health && health.user) {
-        state.user = health.user;
-        await applyRoleUI();
-      } else {
-        state.token = "";
-        sessionStorage.removeItem("placeflow_token");
-        state.user = null;
-        await applyRoleUI();
-      }
+    function applySavedTheme() {
+      const saved = localStorage.getItem("placeflow_theme") || "light";
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(saved);
+      document.getElementById("theme-label").textContent = saved === "dark" ? "Light" : "Dark";
     }
 
-    function fillAdminDemo() {
-      document.getElementById("login-admin-email").value = "admin@rit.edu";
-      document.getElementById("login-admin-pass").value = "RIT-ADMIN-2026";
-      toast("Admin credentials filled");
+    function toggleTheme() {
+      const next = document.documentElement.classList.contains("dark") ? "light" : "dark";
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(next);
+      localStorage.setItem("placeflow_theme", next);
+      document.getElementById("theme-label").textContent = next === "dark" ? "Light" : "Dark";
+    }
+
+    function selectKeyword(kw) {
+      document.getElementById("kw-text").innerHTML = KEYWORD_COPY[kw] || "";
+      document.querySelectorAll(".kw-pill").forEach(btn => {
+        const active = btn.dataset.kw === kw;
+        btn.className = `kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer ${
+          active ? "border-blue-500 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300" : "border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950"
+        }`;
+      });
     }
 
     function pickDemoStudent(email) {
@@ -697,9 +763,27 @@
       toast(`Selected ${email}`);
     }
 
+    async function restoreSession() {
+      const health = await checkHealth();
+      if (health && health.user) {
+        state.user = health.user;
+      } else {
+        state.token = "";
+        sessionStorage.removeItem("placeflow_token");
+        state.user = null;
+      }
+      await applyRoleUI();
+    }
+
     async function loginAs(role) {
-      const email = document.getElementById(role === "admin" ? "login-admin-email" : "login-student-email").value.trim();
-      const passcode = document.getElementById(role === "admin" ? "login-admin-pass" : "login-student-pass").value.trim();
+      const map = {
+        college: ["login-college-email", "login-college-pass"],
+        hr: ["login-hr-email", "login-hr-pass"],
+        student: ["login-student-email", "login-student-pass"]
+      };
+      const [eId, pId] = map[role];
+      const email = document.getElementById(eId).value.trim();
+      const passcode = document.getElementById(pId).value.trim();
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -713,7 +797,7 @@
       state.token = data.token;
       state.user = data.user;
       sessionStorage.setItem("placeflow_token", state.token);
-      toast(`Signed in as ${data.user.role === "admin" ? "Placement Admin" : data.user.email}`);
+      toast(`Signed in as ${data.user.name}`);
       await applyRoleUI();
     }
 
@@ -723,87 +807,55 @@
       state.user = null;
       sessionStorage.removeItem("placeflow_token");
       closeDrawer();
+      closeTestModal();
       await applyRoleUI();
       toast("Signed out");
     }
 
     async function applyRoleUI() {
-      const isSignedIn = !!state.user;
-      const isAdmin = state.user?.role === "admin";
-      const isStudent = state.user?.role === "student";
+      const role = state.user?.role || "";
+      const isSignedIn = !!role;
+      const isCollege = role === "college";
+      const isHr = role === "hr";
+      const isStudent = role === "student";
 
       document.getElementById("auth-gate").classList.toggle("hidden", isSignedIn);
       const nav = document.getElementById("main-nav");
       nav.classList.toggle("hidden", !isSignedIn);
       nav.classList.toggle("flex", isSignedIn);
 
-      const roleBadge = document.getElementById("role-badge");
-      roleBadge.classList.toggle("hidden", !isSignedIn);
-      roleBadge.classList.toggle("inline-flex", isSignedIn);
+      const badge = document.getElementById("role-badge");
+      badge.classList.toggle("hidden", !isSignedIn);
+      badge.classList.toggle("inline-flex", isSignedIn);
       if (isSignedIn) {
-        roleBadge.textContent = isAdmin ? "Admin · Placement Cell" : `Student · ${state.user.email}`;
+        badge.textContent = isCollege ? "College Admin" : isHr ? `HR · ${state.user.email}` : `Student · ${state.user.email}`;
       }
 
       const keyPill = document.getElementById("api-key-pill");
-      keyPill.classList.toggle("hidden", !isAdmin);
-      keyPill.classList.toggle("inline-flex", isAdmin);
-
+      keyPill.classList.toggle("hidden", !isCollege);
+      keyPill.classList.toggle("inline-flex", isCollege);
       document.getElementById("logout-btn").classList.toggle("hidden", !isSignedIn);
 
-      // Strict tab visibility per role
-      document.getElementById("tab-btn-router").classList.toggle("hidden", !isAdmin);
-      document.getElementById("tab-btn-actions").classList.toggle("hidden", !isAdmin);
+      document.getElementById("tab-btn-router").classList.toggle("hidden", !isCollege);
+      document.getElementById("tab-btn-analytics").classList.toggle("hidden", !isCollege);
+      document.getElementById("tab-btn-actions").classList.toggle("hidden", !isCollege);
+      document.getElementById("tab-btn-hr").classList.toggle("hidden", !isHr);
       document.getElementById("tab-btn-student").classList.toggle("hidden", !isStudent);
 
       if (!isSignedIn) {
-        ["router", "actions", "student"].forEach(t => document.getElementById("tab-" + t).classList.add("hidden"));
+        ["router", "analytics", "actions", "hr", "student"].forEach(t => document.getElementById("tab-" + t).classList.add("hidden"));
         return;
       }
-
-      if (isAdmin) {
+      if (isCollege) {
         switchTab("router");
-        await Promise.all([checkHealth(), loadJDs(), loadAdminResults()]);
+        await Promise.all([checkHealth(), loadJDs(), loadCollegeResults(), loadCollegeAnalytics()]);
+      } else if (isHr) {
+        switchTab("hr");
+        await loadHrPortal();
       } else if (isStudent) {
         switchTab("student");
         await loadStudentPortal();
       }
-    }
-
-    async function loadAdminResults() {
-      const res = await apiFetch("/api/admin/results");
-      if (!res.ok) return;
-      const data = await res.json();
-      state.results = data.results || [];
-      renderResults();
-    }
-
-    function applySavedTheme() {
-      const saved = localStorage.getItem("placeflow_theme") || "light";
-      const html = document.documentElement;
-      html.classList.remove("light", "dark");
-      html.classList.add(saved);
-      document.getElementById("theme-label").textContent = saved === "dark" ? "Light" : "Dark";
-    }
-
-    function toggleTheme() {
-      const html = document.documentElement;
-      const next = html.classList.contains("dark") ? "light" : "dark";
-      html.classList.remove("light", "dark");
-      html.classList.add(next);
-      localStorage.setItem("placeflow_theme", next);
-      document.getElementById("theme-label").textContent = next === "dark" ? "Light" : "Dark";
-    }
-
-    function selectKeyword(kw) {
-      document.getElementById("kw-text").innerHTML = KEYWORD_COPY[kw] || "";
-      document.querySelectorAll(".kw-pill").forEach(btn => {
-        const active = btn.dataset.kw === kw;
-        btn.className = `kw-pill interactive-btn px-2.5 py-1.5 rounded-lg text-[11px] font-medium border cursor-pointer ${
-          active
-            ? "border-blue-500 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300"
-            : "border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 text-stone-700 dark:text-zinc-300"
-        }`;
-      });
     }
 
     async function checkHealth() {
@@ -814,41 +866,36 @@
         const dot = document.getElementById("api-key-dot");
         const label = document.getElementById("api-key-label");
         if (data.hasApiKey) {
-          pill.className = `interactive-btn items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border cursor-pointer bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 ${state.user?.role === "admin" ? "inline-flex" : "hidden"}`;
+          pill.className = `interactive-btn items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border cursor-pointer bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 ${state.user?.role === "college" ? "inline-flex" : "hidden"}`;
           dot.className = "w-2 h-2 rounded-full bg-emerald-500";
           label.textContent = `Gemini Ready (${data.maskedKey})`;
         }
         return data;
-      } catch (e) {
-        return null;
-      }
+      } catch (e) { return null; }
     }
 
     async function loadJDs() {
       const res = await fetch("/api/jds");
       const data = await res.json();
       state.jds = data.jds || [];
-      if (state.jds.length) state.activeJdId = state.jds[0].id;
+      if (state.jds.length && !state.jds.some(j => j.id === state.activeJdId)) state.activeJdId = state.jds[0].id;
       renderJDs();
     }
 
     function renderJDs() {
-      const el = document.getElementById("jd-list");
-      el.innerHTML = state.jds.map(jd => {
+      document.getElementById("jd-list").innerHTML = state.jds.map(jd => {
         const active = jd.id === state.activeJdId;
         return `
-          <button onclick="selectJD('${jd.id}')"
+          <button onclick="state.activeJdId='${jd.id}'; renderJDs(); toast('Target JD set to ${escapeHtml(jd.company)}')"
             class="interactive-btn w-full text-left p-3 rounded-xl border cursor-pointer ${
-              active
-                ? "border-blue-600 dark:border-blue-500 bg-blue-50/40 dark:bg-blue-950/20 ring-1 ring-blue-600 dark:ring-blue-500"
-                : "border-stone-200 dark:border-zinc-800 hover:border-stone-400 dark:hover:border-zinc-600"
+              active ? "border-blue-600 bg-blue-50/40 dark:bg-blue-950/20 ring-1 ring-blue-600" : "border-stone-200 dark:border-zinc-800"
             }">
             <div class="flex items-center justify-between gap-2">
               <span class="text-xs font-semibold truncate">${escapeHtml(jd.company)}</span>
-              <span class="text-[11px] font-mono text-stone-500 dark:text-zinc-400 shrink-0">${escapeHtml(jd.ctc || "")}</span>
+              <span class="text-[11px] font-mono text-stone-500">${escapeHtml(jd.ctc || "")}</span>
             </div>
             <div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">${escapeHtml(jd.role)}</div>
-            <div class="flex flex-wrap gap-1.5 mt-2 text-[10px] font-mono">
+            <div class="flex flex-wrap gap-1 mt-2 text-[10px] font-mono">
               <span class="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-zinc-800">CGPA ≥ ${jd.minCgpa}</span>
               <span class="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-zinc-800">${jd.allowedBranches.join("/")}</span>
               <span class="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-zinc-800">Backlogs ≤ ${jd.maxBacklogs}</span>
@@ -858,45 +905,34 @@
       }).join("");
     }
 
-    function selectJD(id) {
-      state.activeJdId = id;
-      renderJDs();
-      const jd = state.jds.find(j => j.id === id);
-      toast(`Target JD set to ${jd.company}`);
-    }
-
     function setupDropzone() {
       const dz = document.getElementById("dropzone");
+      if (!dz) return;
       dz.addEventListener("dragover", (e) => { e.preventDefault(); dz.classList.add("border-blue-600"); });
       dz.addEventListener("dragleave", () => dz.classList.remove("border-blue-600"));
       dz.addEventListener("drop", (e) => {
-        e.preventDefault();
-        dz.classList.remove("border-blue-600");
+        e.preventDefault(); dz.classList.remove("border-blue-600");
         if (e.dataTransfer.files?.length) handleFileInput(e.dataTransfer.files);
       });
     }
 
     function handleFileInput(fileList) {
       const files = Array.from(fileList).filter(f => f.name.toLowerCase().endsWith(".pdf"));
-      if (!files.length) {
-        toast("Please upload .pdf resume files.", "error");
-        return;
-      }
+      if (!files.length) return toast("Please upload .pdf files.", "error");
       files.forEach(file => {
         const reader = new FileReader();
         reader.onload = () => {
-          const b64 = String(reader.result).split(",")[1] || "";
           state.queuedFiles.push({
             id: "f_" + Math.random().toString(36).slice(2, 9),
             fileName: file.name,
             sizeBytes: file.size,
-            pdfBase64: b64
+            pdfBase64: String(reader.result).split(",")[1] || ""
           });
           renderQueue();
         };
         reader.readAsDataURL(file);
       });
-      toast(`Queued ${files.length} PDF resume(s)`);
+      toast(`Queued ${files.length} PDF(s)`);
     }
 
     async function loadDemoPDFs() {
@@ -916,37 +952,23 @@
         addLog(`[queue] Loaded ${state.queuedFiles.length} real RIT sample PDFs.`);
         toast(`Loaded ${state.queuedFiles.length} RIT sample PDFs`);
       } catch (err) {
-        toast(err.message || "Failed to load sample PDFs", "error");
-      } finally {
-        btn.disabled = false;
-      }
+        toast(err.message, "error");
+      } finally { btn.disabled = false; }
     }
 
-    function removeQueuedFile(id) {
-      state.queuedFiles = state.queuedFiles.filter(f => f.id !== id);
-      renderQueue();
-    }
-
-    function clearQueue() {
-      state.queuedFiles = [];
-      renderQueue();
-    }
+    function clearQueue() { state.queuedFiles = []; renderQueue(); }
+    function removeQueuedFile(id) { state.queuedFiles = state.queuedFiles.filter(f => f.id !== id); renderQueue(); }
 
     function renderQueue() {
       const el = document.getElementById("queued-files-list");
-      const clearBtn = document.getElementById("clear-queue-btn");
       document.getElementById("diag-queue-count").textContent = `${state.queuedFiles.length} PDFs`;
-      clearBtn.classList.toggle("hidden", state.queuedFiles.length === 0);
-      if (!state.queuedFiles.length) {
-        el.innerHTML = "";
-        return;
-      }
+      document.getElementById("clear-queue-btn").classList.toggle("hidden", state.queuedFiles.length === 0);
       el.innerHTML = state.queuedFiles.map(f => `
         <div class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800 text-[11px]">
           <span class="truncate font-medium">${escapeHtml(f.fileName)}</span>
           <div class="flex items-center gap-2 shrink-0">
             <span class="font-mono text-stone-400">${Math.round(f.sizeBytes / 1024)}KB</span>
-            <button onclick="removeQueuedFile('${f.id}')" class="text-stone-400 hover:text-rose-500 cursor-pointer" title="Remove">✕</button>
+            <button onclick="removeQueuedFile('${f.id}')" class="text-stone-400 hover:text-rose-500 cursor-pointer">✕</button>
           </div>
         </div>
       `).join("");
@@ -964,51 +986,47 @@
       proc.classList.toggle("ring-blue-500", running);
     }
 
+    async function loadCollegeResults() {
+      const res = await apiFetch("/api/college/results");
+      if (!res.ok) return;
+      const data = await res.json();
+      state.results = data.results || [];
+      renderResults();
+    }
+
     async function runBatchPipeline() {
       const health = await checkHealth();
-      if (!health?.hasApiKey) {
-        openKeyModal();
-        toast("Enter your Gemini API key first", "error");
-        return;
-      }
-      if (!state.queuedFiles.length) {
-        toast("Load the 5 RIT PDFs or upload a PDF first.", "error");
-        return;
-      }
+      if (!health?.hasApiKey) { openKeyModal(); return toast("Set Gemini API key first", "error"); }
+      if (!state.queuedFiles.length) return toast("Load 5 RIT PDFs or upload PDFs first.", "error");
       if (state.isRunning) return;
 
       state.isRunning = true;
       state.results = [];
       renderResults();
-      await apiFetch("/api/admin/clear", { method: "POST" });
+      await apiFetch("/api/college/clear", { method: "POST" });
 
       const btn = document.getElementById("run-pipeline-btn");
       const btnLabel = document.getElementById("run-btn-label");
       btn.disabled = true;
-
       const jd = state.jds.find(j => j.id === state.activeJdId);
-      addLog(`[start] Evaluating ${state.queuedFiles.length} PDF(s) for ${jd.company}...`);
-      setDiagramActive(true, `Processing ${state.queuedFiles.length} resume(s)...`);
+      addLog(`[start] Auditing ${state.queuedFiles.length} PDF(s) for ${jd.company}...`);
 
       for (let i = 0; i < state.queuedFiles.length; i++) {
         const file = state.queuedFiles[i];
         btnLabel.textContent = `Verifying ${i + 1} of ${state.queuedFiles.length}...`;
         setDiagramActive(true, `Auditing ${file.fileName} (${i + 1}/${state.queuedFiles.length})`);
-
         const result = await verifySingleFile(file, jd);
         state.results.push(result);
         renderResults();
-
-        if (i < state.queuedFiles.length - 1) {
-          await new Promise(r => setTimeout(r, 350));
-        }
+        if (i < state.queuedFiles.length - 1) await new Promise(r => setTimeout(r, 350));
       }
 
       setDiagramActive(false, `Completed (${state.results.length} routed)`);
       btn.disabled = false;
       btnLabel.textContent = "Verify & Route Batch";
       state.isRunning = false;
-      toast("Batch verification & auto-routing complete!");
+      await loadCollegeAnalytics();
+      toast("Batch verification & ERP audit complete!");
     }
 
     async function verifySingleFile(file, jd) {
@@ -1016,98 +1034,66 @@
         const res = await apiFetch("/api/verify-resume", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: file.id,
-            fileName: file.fileName,
-            pdfBase64: file.pdfBase64,
-            jd,
-            allJds: state.jds
-          })
+          body: JSON.stringify({ id: file.id, fileName: file.fileName, pdfBase64: file.pdfBase64, jd, allJds: state.jds })
         });
         const data = await res.json();
-        if (!res.ok || !data.ok) {
-          throw new Error(data.error || `HTTP ${res.status}`);
-        }
-        addLog(`[ok] ${data.extracted.student_name} -> ${data.routing.routeLabel} (${data.meta.modelUsed}, ${data.meta.durationMs}ms)`);
-        return {
-          id: data.id || file.id,
-          fileName: file.fileName,
-          pdfBase64: file.pdfBase64,
-          status: "ok",
-          extracted: data.extracted,
-          routing: data.routing,
-          meta: data.meta,
-          checkedDays: data.checkedDays || {}
-        };
+        if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        addLog(`[ok] ${data.extracted.student_name} -> ${data.routing.routeLabel} (ERP: ${data.routing.erpVerification.status})`);
+        return { id: data.id, fileName: file.fileName, pdfBase64: file.pdfBase64, status: "ok", extracted: data.extracted, routing: data.routing, meta: data.meta, checkedDays: {} };
       } catch (err) {
         addLog(`[err] ${file.fileName}: ${err.message}`);
-        return {
-          id: file.id,
-          fileName: file.fileName,
-          pdfBase64: file.pdfBase64,
-          status: "error",
-          error: err.message,
-          checkedDays: {}
-        };
+        return { id: file.id, fileName: file.fileName, pdfBase64: file.pdfBase64, status: "error", error: err.message, checkedDays: {} };
       }
     }
 
     async function retrySingle(id) {
       const idx = state.results.findIndex(r => r.id === id);
       if (idx === -1) return;
-      const item = state.results[idx];
       const jd = state.jds.find(j => j.id === state.activeJdId);
-      toast(`Retrying ${item.fileName}...`);
-      const updated = await verifySingleFile(item, jd);
-      state.results[idx] = updated;
+      state.results[idx] = await verifySingleFile(state.results[idx], jd);
       renderResults();
+      await loadCollegeAnalytics();
     }
 
     function setFilter(filter) {
       state.filter = filter;
       ["SHORTLISTED", "PORTFOLIO_EXCEPTION", "UPSKILL_TRACK", "REROUTED"].forEach(k => {
         const lane = document.getElementById(`lane-${k}`);
-        if (lane) {
-          lane.classList.toggle("ring-2", k === filter);
-          lane.classList.toggle("ring-blue-600", k === filter);
-        }
+        if (lane) { lane.classList.toggle("ring-2", k === filter); lane.classList.toggle("ring-blue-600", k === filter); }
       });
       document.querySelectorAll(".filter-pill").forEach(p => {
         const active = p.dataset.pill === filter;
         p.className = `filter-pill interactive-btn px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer ${
-          active
-            ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
-            : "border border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-300"
+          active ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" : "border border-stone-200 dark:border-zinc-700"
         }`;
       });
       renderResults();
     }
 
-    function routePill(routing) {
-      if (routing.route === "SHORTLISTED") {
-        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">✓ ${escapeHtml(routing.routeLabel)}</span>`;
-      }
-      if (routing.route === "PORTFOLIO_EXCEPTION") {
-        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">★ ${escapeHtml(routing.routeLabel)}</span>`;
-      }
-      if (routing.route === "UPSKILL_TRACK") {
-        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">⚡ ${escapeHtml(routing.routeLabel)}</span>`;
-      }
-      if (routing.altMatches?.length) {
-        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">↪ ${escapeHtml(routing.routeLabel)}</span>`;
-      }
-      return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">✕ ${escapeHtml(routing.routeLabel)}</span>`;
+    function routePill(rt) {
+      if (rt.route === "SHORTLISTED") return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">✓ ${escapeHtml(rt.routeLabel)}</span>`;
+      if (rt.route === "PORTFOLIO_EXCEPTION") return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">★ ${escapeHtml(rt.routeLabel)}</span>`;
+      if (rt.route === "UPSKILL_TRACK") return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">⚡ ${escapeHtml(rt.routeLabel)}</span>`;
+      if (rt.altMatches?.length) return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">↪ ${escapeHtml(rt.routeLabel)}</span>`;
+      return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">✕ ${escapeHtml(rt.routeLabel)}</span>`;
+    }
+
+    function erpBadge(erp) {
+      if (!erp) return "";
+      if (erp.status === "VERIFIED") return `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">ERP ✓ Sem ${erp.officialSemester}</span>`;
+      if (erp.status === "MISMATCH_FLAGGED") return `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">ERP Mismatch!</span>`;
+      return `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-stone-100 dark:bg-zinc-800 text-stone-500">Not in ERP</span>`;
     }
 
     function renderResults() {
       const okItems = state.results.filter(r => r.status === "ok");
       const shortlisted = okItems.filter(r => r.routing.route === "SHORTLISTED").length;
-      const exceptionCount = okItems.filter(r => r.routing.route === "PORTFOLIO_EXCEPTION").length;
+      const exc = okItems.filter(r => r.routing.route === "PORTFOLIO_EXCEPTION").length;
       const upskill = okItems.filter(r => r.routing.route === "UPSKILL_TRACK").length;
       const rerouted = okItems.filter(r => r.routing.route === "REROUTED").length;
 
       document.getElementById("lane-count-SHORTLISTED").textContent = shortlisted;
-      document.getElementById("lane-count-PORTFOLIO_EXCEPTION").textContent = exceptionCount;
+      document.getElementById("lane-count-PORTFOLIO_EXCEPTION").textContent = exc;
       document.getElementById("lane-count-UPSKILL_TRACK").textContent = upskill;
       document.getElementById("lane-count-REROUTED").textContent = rerouted;
       document.getElementById("pill-count-ALL").textContent = state.results.length;
@@ -1118,65 +1104,47 @@
       document.getElementById("empty-results-state").classList.toggle("hidden", hasAny);
       document.getElementById("results-table-wrap").classList.toggle("hidden", !hasAny);
 
-      const query = (document.getElementById("search-input")?.value || "").trim().toLowerCase();
+      const q = (document.getElementById("search-input")?.value || "").trim().toLowerCase();
       const filtered = state.results.filter(r => {
         if (state.filter !== "ALL" && !(r.status === "ok" && r.routing.route === state.filter)) return false;
-        if (!query) return true;
-        if (r.status !== "ok") return r.fileName.toLowerCase().includes(query);
-        const hay = [
-          r.extracted.student_name,
-          r.routing.normalizedBranch,
-          ...r.extracted.verified_skills.map(v => v.skill),
-          ...(r.extracted.unverified_claims || []).map(u => u.skill)
-        ].join(" ").toLowerCase();
-        return hay.includes(query);
+        if (!q) return true;
+        if (r.status !== "ok") return r.fileName.toLowerCase().includes(q);
+        return [r.extracted.student_name, r.routing.normalizedBranch, ...r.extracted.verified_skills.map(v => v.skill)].join(" ").toLowerCase().includes(q);
       });
 
-      const tbody = document.getElementById("candidates-tbody");
-      tbody.innerHTML = filtered.map(item => {
+      document.getElementById("candidates-tbody").innerHTML = filtered.map(item => {
         if (item.status === "error") {
-          return `
-            <tr class="bg-rose-50/40 dark:bg-rose-950/20">
-              <td class="py-3 pr-3 font-medium">${escapeHtml(item.fileName)}</td>
-              <td colspan="3" class="py-3 px-2 text-rose-600 dark:text-rose-400">${escapeHtml(item.error)}</td>
-              <td class="py-3 pl-2 text-right">
-                <button onclick="retrySingle('${item.id}')" class="interactive-btn px-2.5 py-1 rounded-lg bg-rose-600 text-white text-xs font-medium cursor-pointer">Retry</button>
-              </td>
-            </tr>
-          `;
+          return `<tr class="bg-rose-50/40 dark:bg-rose-950/20"><td class="py-3 pr-3 font-medium">${escapeHtml(item.fileName)}</td><td colspan="3" class="py-3 px-2 text-rose-600">${escapeHtml(item.error)}</td><td class="py-3 pl-2 text-right"><button onclick="retrySingle('${item.id}')" class="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-xs cursor-pointer">Retry</button></td></tr>`;
         }
-        const ex = item.extracted;
-        const rt = item.routing;
-        const unverifiedCount = ex.unverified_claims?.length || 0;
+        const ex = item.extracted, rt = item.routing;
+        const cred = rt.credibility?.score ?? 0;
+        const unv = ex.unverified_claims?.length || 0;
         return `
           <tr onclick="openDrawer('${item.id}')" class="hover:bg-stone-50 dark:hover:bg-zinc-800/50 cursor-pointer transition">
             <td class="py-3 pr-3">
               <div class="font-semibold">${escapeHtml(ex.student_name)}</div>
-              <div class="text-[11px] text-stone-500 dark:text-zinc-400">${escapeHtml(ex.email)}</div>
+              <div class="text-[11px] text-stone-500">${escapeHtml(ex.email)}</div>
             </td>
-            <td class="py-3 px-2 font-mono tabular-nums">
-              <div>${escapeHtml(rt.normalizedBranch)} · ${ex.cgpa}</div>
-              <div class="text-[11px] text-stone-500 dark:text-zinc-400">${ex.active_backlogs} backlogs</div>
+            <td class="py-3 px-2 font-mono tabular-nums space-y-1">
+              <div>${escapeHtml(rt.normalizedBranch)} · ${rt.erpVerification?.officialCgpa ?? ex.cgpa}</div>
+              <div>${erpBadge(rt.erpVerification)}</div>
             </td>
             <td class="py-3 px-2 min-w-[140px]">
               <div class="flex items-center justify-between text-[11px] font-mono mb-1">
                 <span>${rt.matchPct}% fit</span>
-                <span class="text-stone-400">${ex.verified_skills.length} verified</span>
+                <span class="text-stone-400">Trust ${cred}/100</span>
               </div>
               <div class="w-full h-1.5 rounded-full bg-stone-200 dark:bg-zinc-800 overflow-hidden">
                 <div class="h-full rounded-full ${rt.matchPct >= 75 ? "bg-emerald-500" : "bg-amber-500"}" style="width: ${rt.matchPct}%"></div>
               </div>
-              ${unverifiedCount > 0 ? `<div class="text-[11px] text-rose-600 dark:text-rose-400 mt-1 font-medium">${unverifiedCount} unverified buzzword(s)</div>` : ""}
+              ${unv > 0 ? `<div class="text-[11px] text-rose-600 dark:text-rose-400 mt-1">${unv} unverified buzzword(s)</div>` : ""}
             </td>
             <td class="py-3 px-2">
               ${routePill(rt)}
-              ${rt.altMatches?.length ? `<div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-1">→ ${escapeHtml(rt.altMatches[0].company)}</div>` : ""}
+              ${rt.altMatches?.length ? `<div class="text-[11px] text-stone-500 mt-1">→ ${escapeHtml(rt.altMatches[0].company)}</div>` : ""}
             </td>
             <td class="py-3 pl-2 text-right">
-              <button onclick="event.stopPropagation(); openDrawer('${item.id}')"
-                class="interactive-btn px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 hover:border-blue-600 text-xs font-medium cursor-pointer">
-                Inspect →
-              </button>
+              <button onclick="event.stopPropagation(); openDrawer('${item.id}')" class="interactive-btn px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 text-xs font-medium cursor-pointer">Inspect →</button>
             </td>
           </tr>
         `;
@@ -1189,67 +1157,53 @@
       state.drawerId = id;
       const item = state.results.find(r => r.id === id);
       if (!item || item.status !== "ok") return;
-
       document.getElementById("drawer-title").textContent = item.extracted.student_name;
       renderDrawerBody(item);
-
       document.getElementById("drawer-backdrop").classList.remove("hidden");
       document.getElementById("dossier-drawer").classList.remove("translate-x-full");
     }
-
     function closeDrawer() {
       document.getElementById("drawer-backdrop").classList.add("hidden");
       document.getElementById("dossier-drawer").classList.add("translate-x-full");
     }
-
     function stepDrawer(delta) {
-      const okItems = state.results.filter(r => r.status === "ok");
-      if (!okItems.length) return;
-      const idx = okItems.findIndex(r => r.id === state.drawerId);
-      const next = okItems[(idx + delta + okItems.length) % okItems.length];
-      openDrawer(next.id);
+      const ok = state.results.filter(r => r.status === "ok");
+      if (!ok.length) return;
+      const idx = ok.findIndex(r => r.id === state.drawerId);
+      openDrawer(ok[(idx + delta + ok.length) % ok.length].id);
     }
 
     async function approveWaiver(itemId) {
-      const res = await apiFetch("/api/admin/approve-waiver", {
+      const res = await apiFetch("/api/college/approve-waiver", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: itemId })
       });
       const data = await res.json();
-      if (!res.ok || !data.ok) {
-        toast(data.error || "Failed to approve waiver", "error");
-        return;
-      }
+      if (!res.ok || !data.ok) return toast(data.error || "Failed", "error");
       const idx = state.results.findIndex(r => r.id === itemId);
-      if (idx !== -1) {
-        state.results[idx] = data.record;
-      }
-      addLog(`[waiver] ${data.record.extracted.student_name} promoted from Portfolio Exception -> Shortlisted.`);
+      if (idx !== -1) state.results[idx] = data.record;
       toast(`Cutoff waiver approved for ${data.record.extracted.student_name}!`);
       renderResults();
       renderDrawerBody(data.record);
-    }
-
-    function toggleDayTask(itemId, dayIdx) {
-      const item = state.results.find(r => r.id === itemId);
-      if (!item) return;
-      item.checkedDays[dayIdx] = !item.checkedDays[dayIdx];
-      renderDrawerBody(item);
-      if (state.portalId === itemId) renderStudentPortalBody();
+      await loadCollegeAnalytics();
     }
 
     function renderDrawerBody(item) {
-      const ex = item.extracted;
-      const rt = item.routing;
+      const ex = item.extracted, rt = item.routing;
+      const erp = rt.erpVerification || {};
+      const cred = rt.credibility || { score: 0, tier: "" };
       const rawJson = JSON.stringify({ extracted: ex, routing: rt, meta: item.meta }, null, 2);
 
       document.getElementById("drawer-content").innerHTML = `
         <div class="flex items-center justify-between gap-2 flex-wrap">
-          <div class="text-stone-500 dark:text-zinc-400">
-            ${escapeHtml(ex.email)} · Model: <span class="font-mono">${escapeHtml(item.meta.modelUsed)}</span> (${item.meta.durationMs}ms)
-          </div>
+          <div class="text-stone-500">${escapeHtml(ex.email)} · Trust: <strong class="font-mono">${cred.score}/100</strong> (${escapeHtml(cred.tier)})</div>
           ${routePill(rt)}
+        </div>
+
+        <div class="p-3.5 rounded-xl border ${erp.verified ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20" : "border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20"}">
+          <div class="font-semibold mb-0.5">College ERP Verification (${escapeHtml(erp.status || "N/A")})</div>
+          <div class="text-stone-600 dark:text-zinc-300">${escapeHtml(erp.summary || "")}</div>
         </div>
 
         <div class="p-3.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900">
@@ -1261,189 +1215,480 @@
           <div class="p-3.5 rounded-xl border border-teal-300 dark:border-teal-800 bg-teal-50/60 dark:bg-teal-950/30 flex items-center justify-between gap-3 flex-wrap">
             <div>
               <div class="font-semibold text-teal-800 dark:text-teal-300">Strong Project Proof — Cutoff Waiver Eligible</div>
-              <div class="text-teal-700/80 dark:text-teal-400/80 mt-0.5">Override academic cutoff and add directly to the HR Shortlist CSV?</div>
+              <div class="text-teal-700/80 dark:text-teal-400/80 mt-0.5">Promote candidate to HR Shortlist?</div>
             </div>
-            <button onclick="approveWaiver('${item.id}')"
-              class="interactive-btn px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold cursor-pointer">
-              Approve Cutoff Waiver →
-            </button>
+            <button onclick="approveWaiver('${item.id}')" class="interactive-btn px-3.5 py-2 rounded-xl bg-teal-600 text-white font-semibold cursor-pointer">Approve Cutoff Waiver →</button>
           </div>
         ` : ""}
-
-        <div class="grid grid-cols-3 gap-2.5">
-          <div class="p-3 rounded-xl border ${rt.passesCgpa ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20" : "border-rose-200 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20"}">
-            <div class="font-semibold">${rt.passesCgpa ? "✓" : "✕"} CGPA</div>
-            <div class="font-mono mt-0.5">${ex.cgpa}</div>
-          </div>
-          <div class="p-3 rounded-xl border ${rt.passesBranch ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20" : "border-rose-200 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20"}">
-            <div class="font-semibold">${rt.passesBranch ? "✓" : "✕"} Branch</div>
-            <div class="font-mono mt-0.5">${escapeHtml(rt.normalizedBranch)}</div>
-          </div>
-          <div class="p-3 rounded-xl border ${rt.passesBacklogs ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20" : "border-rose-200 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20"}">
-            <div class="font-semibold">${rt.passesBacklogs ? "✓" : "✕"} Backlogs</div>
-            <div class="font-mono mt-0.5">${ex.active_backlogs}</div>
-          </div>
-        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-2">
             <div class="font-semibold text-emerald-700 dark:text-emerald-400">Verified Skills (With Proof)</div>
-            ${ex.verified_skills.map(v => `
-              <div class="p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900">
-                <div class="font-semibold">${escapeHtml(v.skill)}</div>
-                <div class="text-stone-500 dark:text-zinc-400 mt-0.5">${escapeHtml(v.evidence_source)}</div>
-              </div>
-            `).join("") || `<div class="text-stone-400">None verified.</div>`}
+            ${ex.verified_skills.map(v => `<div class="p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900"><div class="font-semibold">${escapeHtml(v.skill)}</div><div class="text-stone-500 mt-0.5">${escapeHtml(v.evidence_source)}</div></div>`).join("") || `<div class="text-stone-400">None verified.</div>`}
           </div>
-
           <div class="space-y-2">
-            <div class="font-semibold text-rose-700 dark:text-rose-400">Unverified Claims &amp; Gaps</div>
-            ${(ex.unverified_claims || []).map(u => `
-              <div class="p-2.5 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20">
-                <div class="font-semibold text-rose-700 dark:text-rose-300">${escapeHtml(u.skill)} (Flagged)</div>
-                <div class="text-stone-600 dark:text-zinc-400 mt-0.5">${escapeHtml(u.reason)}</div>
-              </div>
-            `).join("") || `<div class="p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 text-stone-500">0 unverified buzzwords.</div>`}
-            ${rt.missingMustHave.length ? `
-              <div class="p-2.5 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
-                <span class="font-semibold text-amber-800 dark:text-amber-300">Missing Must-Have:</span>
-                <span> ${escapeHtml(rt.missingMustHave.join(", "))}</span>
-              </div>
-            ` : ""}
+            <div class="font-semibold text-rose-700 dark:text-rose-400">Unverified Claims &amp; Missing Skills</div>
+            ${(ex.unverified_claims || []).map(u => `<div class="p-2.5 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20"><div class="font-semibold text-rose-700 dark:text-rose-300">${escapeHtml(u.skill)} (Flagged)</div><div class="text-stone-600 dark:text-zinc-400 mt-0.5">${escapeHtml(u.reason)}</div></div>`).join("") || `<div class="p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 text-stone-500">0 unverified buzzwords.</div>`}
+            ${rt.missingMustHave.length ? `<div class="p-2.5 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20"><span class="font-semibold text-amber-800 dark:text-amber-300">Missing:</span> ${escapeHtml(rt.missingMustHave.join(", "))}</div>` : ""}
           </div>
         </div>
 
         ${rt.recommendedCourses?.length ? `
           <div class="space-y-2">
-            <div class="font-semibold">Recommended YouTube Courses (Skill Gaps)</div>
+            <div class="font-semibold">Assigned YouTube Courses</div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              ${rt.recommendedCourses.map(c => `
-                <a href="${escapeHtml(c.url)}" target="_blank" rel="noopener"
-                  class="interactive-card p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900 flex items-center justify-between gap-2 hover:border-rose-400">
-                  <div class="min-w-0">
-                    <div class="text-[11px] font-semibold truncate">${escapeHtml(c.courseTitle)}</div>
-                    <div class="text-[10px] text-stone-500 dark:text-zinc-400">${escapeHtml(c.skill)} · ${escapeHtml(c.badge)}</div>
-                  </div>
-                  <span class="shrink-0 px-2 py-1 rounded-lg bg-rose-600 text-white text-[10px] font-semibold">▶ Watch ↗</span>
-                </a>
-              `).join("")}
-            </div>
-          </div>
-        ` : ""}
-
-        ${ex.upskilling_plan_7_days?.length ? `
-          <div class="space-y-2">
-            <div class="font-semibold">Interactive 7-Day Upskilling Checklist</div>
-            <div class="space-y-2">
-              ${ex.upskilling_plan_7_days.map((step, i) => {
-                const checked = !!item.checkedDays[i];
-                return `
-                  <label class="flex items-start justify-between gap-2.5 p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900 cursor-pointer">
-                    <div class="flex items-start gap-2.5">
-                      <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleDayTask('${item.id}', ${i})" class="mt-0.5 accent-blue-600" />
-                      <div class="${checked ? "line-through opacity-60" : ""}">
-                        <div class="font-semibold">${escapeHtml(step.day)} · ${escapeHtml(step.focus_topic)}</div>
-                        <div class="text-stone-500 dark:text-zinc-400">${escapeHtml(step.mini_task)}</div>
-                      </div>
-                    </div>
-                    ${step.youtube_url ? `
-                      <a href="${escapeHtml(step.youtube_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"
-                        class="interactive-btn shrink-0 px-2.5 py-1 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-[11px] font-semibold">
-                        ▶ YouTube ↗
-                      </a>
-                    ` : ""}
-                  </label>
-                `;
-              }).join("")}
+              ${rt.recommendedCourses.map(c => `<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener" class="interactive-card p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900 flex items-center justify-between gap-2"><div class="min-w-0"><div class="text-[11px] font-semibold truncate">${escapeHtml(c.courseTitle)}</div><div class="text-[10px] text-stone-500">${escapeHtml(c.skill)}</div></div><span class="px-2 py-1 rounded-lg bg-rose-600 text-white text-[10px] font-semibold">▶ Watch ↗</span></a>`).join("")}
             </div>
           </div>
         ` : ""}
 
         <div class="space-y-2 pt-2 border-t border-stone-200 dark:border-zinc-800">
-          <div class="flex items-center justify-between gap-2 flex-wrap">
-            <button onclick="document.getElementById('raw-json-pre').classList.toggle('hidden')"
-              class="interactive-btn px-3 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 font-medium cursor-pointer hover:bg-stone-100 dark:hover:bg-zinc-800">
-              { } Toggle Raw Gemini JSON
-            </button>
-            <div class="flex gap-2 items-center">
-              <button onclick="copyText(${JSON.stringify(rawJson)}, 'Copied Gemini JSON')"
-                class="interactive-btn px-3 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 font-medium cursor-pointer hover:bg-stone-100 dark:hover:bg-zinc-800">
-                Copy JSON
-              </button>
-              <span class="text-[11px] text-stone-400">Student view is isolated to student accounts</span>
-            </div>
+          <div class="flex items-center justify-between gap-2">
+            <button onclick="document.getElementById('raw-json-pre').classList.toggle('hidden')" class="interactive-btn px-3 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 font-medium cursor-pointer">{ } Toggle Raw Gemini JSON</button>
+            <button onclick="copyText(${JSON.stringify(rawJson)}, 'Copied JSON')" class="interactive-btn px-3 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 font-medium cursor-pointer">Copy JSON</button>
           </div>
           <pre id="raw-json-pre" class="hidden p-3 rounded-xl bg-zinc-900 text-zinc-100 text-[11px] font-mono overflow-x-auto max-h-64">${escapeHtml(rawJson)}</pre>
         </div>
       `;
     }
 
-    function renderEmailQueue(okItems) {
-      const el = document.getElementById("email-queue");
-      if (!okItems.length) {
-        el.innerHTML = `<div class="text-xs text-stone-500 dark:text-zinc-400 py-8 text-center">Run the pipeline in Auto-Router to generate student notifications.</div>`;
+    // ==================== COLLEGE ANALYTICS & ERP ====================
+    async function loadCollegeAnalytics() {
+      const res = await apiFetch("/api/college/analytics");
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const bars = document.getElementById("branch-stats-bars");
+      if (!data.branchStats?.length) {
+        bars.innerHTML = `<div class="text-stone-500 py-4">Evaluate a batch in Auto-Router to see branch acceptance rates.</div>`;
+      } else {
+        bars.innerHTML = data.branchStats.map(b => `
+          <div class="p-3 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold">${escapeHtml(b.branch)} <span class="text-stone-500 font-normal">(${b.shortlisted}/${b.total} shortlisted)</span></span>
+              <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">${b.acceptanceRatePct}% Acceptance</span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-stone-200 dark:bg-zinc-800 overflow-hidden">
+              <div class="h-full bg-emerald-500 rounded-full" style="width:${b.acceptanceRatePct}%"></div>
+            </div>
+            <div class="flex gap-3 text-[11px] text-stone-500 font-mono">
+              <span>Exception: ${b.exception}</span>
+              <span>Upskill: ${b.upskill}</span>
+              <span>Rerouted: ${b.rerouted}</span>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      const lack = document.getElementById("lacking-skills-list");
+      lack.innerHTML = data.topLackingSkills?.length
+        ? data.topLackingSkills.map(s => `<div class="flex items-center justify-between p-2 rounded-lg border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950"><span class="font-medium">${escapeHtml(s.skill)}</span><span class="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-mono">${s.count} student(s)</span></div>`).join("")
+        : `<div class="text-stone-500">No skill gaps recorded yet.</div>`;
+
+      renderBranchShortlist();
+    }
+
+    function renderBranchShortlist() {
+      const br = document.getElementById("analytics-branch-filter").value;
+      const list = state.results.filter(r => r.status === "ok" && r.routing.route === "SHORTLISTED" && (br === "ALL" || r.routing.normalizedBranch === br));
+      const el = document.getElementById("branch-shortlist-list");
+      el.innerHTML = list.length
+        ? list.map(r => `<div class="p-2.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 flex items-center justify-between"><div><span class="font-semibold">${escapeHtml(r.extracted.student_name)}</span> · <span class="font-mono">${escapeHtml(r.routing.normalizedBranch)} (${r.routing.erpVerification?.officialCgpa ?? r.extracted.cgpa})</span></div>${routePill(r.routing)}</div>`).join("")
+        : `<div class="text-stone-500">No shortlisted students match branch filter "${escapeHtml(br)}".</div>`;
+    }
+
+    function simulateTamperedERP() {
+      document.getElementById("erp-email").value = "kiran.gowda@rit.edu";
+      document.getElementById("erp-cgpa").value = "9.10";
+      document.getElementById("erp-sem").value = "8";
+      document.getElementById("erp-branch").value = "CSE";
+      runManualErpCheck();
+    }
+
+    async function runManualErpCheck() {
+      const res = await apiFetch("/api/college/erp-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: document.getElementById("erp-email").value.trim(),
+          resumeCgpa: parseFloat(document.getElementById("erp-cgpa").value) || 0,
+          claimedSemester: parseInt(document.getElementById("erp-sem").value, 10) || 7,
+          resumeBranch: document.getElementById("erp-branch").value.trim(),
+          resumeBacklogs: parseInt(document.getElementById("erp-backlogs").value, 10) || 0
+        })
+      });
+      const data = await res.json();
+      const erp = data.erpVerification;
+      const box = document.getElementById("erp-check-result");
+      box.innerHTML = `
+        <div class="p-3 rounded-xl border ${erp.verified ? "border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300" : "border-rose-300 bg-rose-50/60 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300"}">
+          <div class="font-semibold">${escapeHtml(erp.status)} — USN: ${escapeHtml(erp.usn)}</div>
+          <div class="mt-1">${escapeHtml(erp.summary)}</div>
+        </div>
+      `;
+    }
+
+    // ==================== HR CREDIBILITY PORTAL ====================
+    async function loadHrPortal() {
+      const br = document.getElementById("hr-branch-filter").value;
+      const inc = document.getElementById("hr-include-all").checked ? "1" : "0";
+      const res = await apiFetch(`/api/hr/candidates?branch=${encodeURIComponent(br)}&includeAll=${inc}`);
+      const data = await res.json();
+      state.hrCandidates = data.candidates || [];
+      const grid = document.getElementById("hr-candidates-grid");
+      if (!state.hrCandidates.length) {
+        grid.innerHTML = `<div class="md:col-span-2 rounded-xl border border-dashed border-stone-300 dark:border-zinc-700 p-8 text-center text-xs text-stone-500">No shortlisted candidates available yet. Ask College Placement Cell to run batch screening first (or check "Include All Screened").</div>`;
         return;
       }
-      const jd = state.jds.find(j => j.id === state.activeJdId);
-      el.innerHTML = okItems.map(item => {
-        const ex = item.extracted;
-        const rt = item.routing;
-        const subject = `[Placement Cell] ${jd.company} — ${rt.routeLabel}`;
-        const body = ex.drafted_notification || rt.verdictReason;
-        const mailto = `mailto:${encodeURIComponent(ex.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      grid.innerHTML = state.hrCandidates.map(c => {
+        const ex = c.extracted, rt = c.routing;
+        const cred = rt.credibility || { score: 0, tier: "", breakdown: {} };
+        const erp = rt.erpVerification || {};
+        const st = c.skillTest;
         return `
-          <div class="interactive-card p-3.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 text-xs space-y-2">
-            <div class="flex items-center justify-between gap-2 flex-wrap">
-              <div class="font-semibold">${escapeHtml(ex.student_name)} <span class="font-normal text-stone-500">&lt;${escapeHtml(ex.email)}&gt;</span></div>
-              ${routePill(rt)}
+          <div class="interactive-card rounded-2xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 p-4 space-y-3 text-xs">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="text-sm font-semibold">${escapeHtml(ex.student_name)}</div>
+                <div class="text-stone-500 font-mono">${escapeHtml(rt.normalizedBranch)} · CGPA ${erp.officialCgpa ?? ex.cgpa} · Sem ${erp.officialSemester ?? 7}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">${cred.score}/100</div>
+                <div class="text-[10px] uppercase tracking-wider text-stone-400">${escapeHtml(cred.tier)}</div>
+              </div>
             </div>
-            <p class="text-stone-600 dark:text-zinc-300">${escapeHtml(body)}</p>
-            <div class="flex items-center gap-2 pt-1">
-              <button onclick="copyText(${JSON.stringify(body)}, 'Copied email for ${escapeHtml(ex.student_name)}')"
-                class="interactive-btn px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 font-medium cursor-pointer">
-                Copy Message
-              </button>
-              <a href="${mailto}" class="interactive-btn px-2.5 py-1.5 rounded-lg bg-blue-600 text-white font-medium inline-block">
-                Open in Mail App ↗
-              </a>
+
+            <div class="flex flex-wrap gap-1.5">
+              ${routePill(rt)}
+              ${erpBadge(erp)}
+              ${st ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-mono ${st.passed ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200" : "bg-rose-50 text-rose-700"}">AI Test: ${st.scorePct}% (Cam:${st.proctoring?.webcamActive ? "✓" : "Off"})</span>` : ""}
+            </div>
+
+            <div class="grid grid-cols-4 gap-1.5 text-[10px] font-mono text-center">
+              <div class="p-1.5 rounded bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800">ERP<br><strong>+${cred.breakdown?.erpVerificationPts ?? 0}</strong></div>
+              <div class="p-1.5 rounded bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800">Proof<br><strong>+${cred.breakdown?.projectProofPts ?? 0}</strong></div>
+              <div class="p-1.5 rounded bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800">No Bluff<br><strong>+${cred.breakdown?.zeroBuzzwordPts ?? 0}</strong></div>
+              <div class="p-1.5 rounded bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800">Test/Fit<br><strong>+${cred.breakdown?.skillValidationPts ?? 0}</strong></div>
+            </div>
+
+            <div class="text-stone-600 dark:text-zinc-300">${escapeHtml(ex.project_summary)}</div>
+            <div class="flex flex-wrap gap-1">
+              ${ex.verified_skills.map(v => `<span class="px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-medium">✓ ${escapeHtml(v.skill)}</span>`).join("")}
             </div>
           </div>
         `;
       }).join("");
     }
 
+    function downloadHrCSV() {
+      if (!state.hrCandidates.length) return toast("No HR candidates to export", "error");
+      const rows = [["Name", "Email", "Branch", "ERP CGPA", "Semester", "Credibility Score", "ERP Status", "Verified Skills"]];
+      state.hrCandidates.forEach(c => {
+        const ex = c.extracted, rt = c.routing;
+        rows.push([ex.student_name, ex.email, rt.normalizedBranch, rt.erpVerification?.officialCgpa ?? ex.cgpa, rt.erpVerification?.officialSemester ?? 7, (rt.credibility?.score ?? 0) + "/100", rt.erpVerification?.status || "", ex.verified_skills.map(v => v.skill).join("; ")]);
+      });
+      downloadBlob(rows.map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(",")).join("\n"), "hr_credible_shortlist.csv", "text/csv");
+      toast("Downloaded HR Shortlist CSV!");
+    }
+
+    // ==================== STUDENT PORTAL + OPPORTUNITIES + PROCTORED TEST ====================
     async function loadStudentPortal() {
-      const el = document.getElementById("student-portal-body");
       const res = await apiFetch("/api/student/me");
       const data = await res.json();
-      if (!res.ok || !data.ok) {
-        el.innerHTML = `<div class="text-xs text-rose-600 py-8 text-center">${escapeHtml(data.error || "Unable to load Student Portal.")}</div>`;
+      if (!res.ok || !data.ok) return toast(data.error || "Failed to load", "error");
+      state.studentData = data;
+      renderStudentErpBanner(data.erpRecord);
+      renderStudentPortalBody();
+      renderStudentOpportunities(data.opportunities || []);
+    }
+
+    function renderStudentErpBanner(erp) {
+      const el = document.getElementById("student-erp-banner");
+      if (!erp) { el.innerHTML = ""; return; }
+      el.innerHTML = `
+        <div class="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20 flex items-center justify-between gap-3 flex-wrap text-xs">
+          <div><span class="font-semibold">College ERP Verified Record:</span> ${escapeHtml(erp.name)} · USN <span class="font-mono">${escapeHtml(erp.usn)}</span></div>
+          <div class="font-mono font-semibold">Branch: ${escapeHtml(erp.branch)} · Sem ${erp.semester} · CGPA ${erp.cgpa} · Backlogs ${erp.active_backlogs}</div>
+        </div>
+      `;
+    }
+
+    function renderStudentPortalBody() {
+      const el = document.getElementById("student-portal-body");
+      const records = state.studentData?.records || [];
+      if (!records.length) {
+        el.innerHTML = `<div class="rounded-xl border border-dashed border-stone-300 dark:border-zinc-700 p-6 text-center text-xs text-stone-500">Your resume hasn't been screened in the current College batch yet — meanwhile you can browse all Company Opportunities below and prepare or take an AI Skill Test!</div>`;
         return;
       }
-      state.studentRecords = data.records || [];
-      state.studentActiveJd = data.activeJd || null;
-      renderStudentPortalBody();
+      const item = records[records.length - 1];
+      const ex = item.extracted, rt = item.routing, jd = state.studentData.activeJd || { company: "Target Company" };
+
+      let card = "";
+      if (rt.route === "SHORTLISTED") {
+        card = `<div class="p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 text-xs space-y-1"><div class="text-sm font-semibold text-emerald-700 dark:text-emerald-300">✓ Shortlisted for ${escapeHtml(jd.company)}!</div><p>${escapeHtml(rt.waiverApproved ? rt.verdictReason : ex.drafted_notification)}</p></div>`;
+      } else if (rt.route === "PORTFOLIO_EXCEPTION") {
+        card = `<div class="p-4 rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20 text-xs space-y-2"><div class="text-sm font-semibold text-teal-800 dark:text-teal-300">★ Portfolio Exception — Nominated for Cutoff Waiver</div><p>${escapeHtml(rt.verdictReason)}</p></div>`;
+      } else if (rt.route === "UPSKILL_TRACK") {
+        const steps = ex.upskilling_plan_7_days || [];
+        const courses = rt.recommendedCourses || [];
+        card = `
+          <div class="p-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20 space-y-4 text-xs">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <div class="text-sm font-semibold text-amber-800 dark:text-amber-300">⚡ Upskill Track — YouTube Courses &amp; AI Skill Test</div>
+                <p class="text-stone-600 dark:text-zinc-300 mt-0.5">${escapeHtml(rt.verdictReason)}</p>
+              </div>
+              <button onclick="startProctoredTest('${escapeHtml(jd.id)}', ${JSON.stringify(rt.missingMustHave || [])})"
+                class="interactive-btn px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer">
+                Take AI Proctored Skill Test (Webcam + Mic) →
+              </button>
+            </div>
+            ${courses.length ? `<div class="grid grid-cols-1 md:grid-cols-2 gap-2">${courses.map(c => `<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener" class="interactive-card p-3 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 flex items-center justify-between gap-2"><div><div class="font-semibold">${escapeHtml(c.courseTitle)}</div><div class="text-[11px] text-stone-500">${escapeHtml(c.skill)} · ${escapeHtml(c.badge)}</div></div><span class="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-semibold">▶ Watch ↗</span></a>`).join("")}</div>` : ""}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              ${steps.map((s, idx) => `<label class="interactive-card p-3 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 space-y-2 cursor-pointer flex flex-col justify-between"><div class="space-y-1"><div class="flex justify-between font-semibold"><span>${escapeHtml(s.day)}</span><input type="checkbox" ${item.checkedDays?.[String(idx)] ? "checked" : ""} onchange="toggleDayTask('${item.id}', ${idx})" class="accent-blue-600" /></div><div class="font-medium">${escapeHtml(s.focus_topic)}</div><div class="text-[11px] text-stone-500">${escapeHtml(s.mini_task)}</div></div>${s.youtube_url ? `<a href="${escapeHtml(s.youtube_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="px-2 py-1 rounded-lg border border-rose-300 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-[11px] font-semibold text-center">▶ Watch Tutorial ↗</a>` : ""}</label>`).join("")}
+            </div>
+          </div>
+        `;
+      } else if (rt.altMatches?.length) {
+        const alt = rt.altMatches[0];
+        card = `<div class="p-4 rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50/40 dark:bg-sky-950/20 text-xs flex items-center justify-between gap-3 flex-wrap"><div><div class="text-sm font-semibold text-sky-800 dark:text-sky-300">↪ Auto-Rerouted to ${escapeHtml(alt.company)}</div><p>${escapeHtml(rt.verdictReason)}</p></div><button onclick="confirmReroute('${item.id}', ${JSON.stringify(alt.company)})" class="interactive-btn px-3.5 py-2 rounded-xl ${item.appliedAlt ? "bg-emerald-600" : "bg-blue-600"} text-white font-semibold cursor-pointer">${item.appliedAlt ? "✓ Confirmed" : "Confirm Auto-Reroute"}</button></div>`;
+      }
+      el.innerHTML = `<div class="space-y-3"><div class="flex items-center justify-between flex-wrap gap-2"><div class="text-sm font-semibold">${escapeHtml(ex.student_name)} · Credibility ${rt.credibility?.score ?? 0}/100</div>${routePill(rt)}</div>${card}</div>`;
+    }
+
+    function renderStudentOpportunities(opps) {
+      document.getElementById("student-opportunities-grid").innerHTML = opps.map(op => {
+        const jd = op.jd;
+        return `
+          <div class="interactive-card rounded-2xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 p-4 space-y-3 text-xs flex flex-col justify-between">
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-semibold text-sm">${escapeHtml(jd.company)}</span>
+                <span class="font-mono text-[11px] text-stone-500">${escapeHtml(jd.ctc || "")}</span>
+              </div>
+              <div class="text-stone-600 dark:text-zinc-400">${escapeHtml(jd.role)}</div>
+              <div class="flex flex-wrap gap-1 pt-1">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-medium ${op.eligible ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300" : "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300"}">${op.eligible ? "Eligible" : "Cutoff Unmet"}</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800">${op.fitPct}% skill fit</span>
+              </div>
+            </div>
+            <div class="flex gap-2 pt-1">
+              <button onclick="openViewJDModal('${jd.id}')" class="interactive-btn flex-1 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 font-medium cursor-pointer">View JD</button>
+              <button onclick="prepareForJD('${jd.id}')" class="interactive-btn flex-1 py-2 rounded-xl bg-blue-600 text-white font-semibold cursor-pointer">Prepare JD</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function openViewJDModal(jdId) {
+      const op = (state.studentData?.opportunities || []).find(o => o.jd.id === jdId);
+      if (!op) return;
+      const jd = op.jd;
+      document.getElementById("view-jd-title").textContent = `${jd.company} — ${jd.role}`;
+      document.getElementById("view-jd-body").innerHTML = `
+        <div class="grid grid-cols-3 gap-2 font-mono">
+          <div class="p-2.5 rounded-xl bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800">Min CGPA: <strong>${jd.minCgpa}</strong></div>
+          <div class="p-2.5 rounded-xl bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800">Backlogs: <strong>≤ ${jd.maxBacklogs}</strong></div>
+          <div class="p-2.5 rounded-xl bg-stone-50 dark:bg-zinc-950 border border-stone-200 dark:border-zinc-800">CTC: <strong>${escapeHtml(jd.ctc || "N/A")}</strong></div>
+        </div>
+        <div><strong>Allowed Branches:</strong> ${escapeHtml(jd.allowedBranches.join(", "))}</div>
+        <div><strong>Must-Have Skills:</strong> ${escapeHtml(jd.mustHaveSkills.join(", "))}</div>
+        <div><strong>Your Missing Skills:</strong> ${op.missingSkills.length ? escapeHtml(op.missingSkills.join(", ")) : "None — 100% matched!"}</div>
+      `;
+      document.getElementById("view-jd-modal").classList.remove("hidden");
+      document.getElementById("view-jd-modal").classList.add("flex");
+    }
+    function closeViewJDModal() { document.getElementById("view-jd-modal").classList.add("hidden"); document.getElementById("view-jd-modal").classList.remove("flex"); }
+
+    async function prepareForJD(jdId) {
+      const res = await apiFetch("/api/student/prepare-jd", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jdId })
+      });
+      const plan = await res.json();
+      if (!res.ok || !plan.ok) return;
+      const box = document.getElementById("student-jd-prep-box");
+      box.classList.remove("hidden");
+      box.innerHTML = `
+        <div class="rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/20 p-5 space-y-4 text-xs">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div class="text-sm font-semibold">Custom Preparation Roadmap: ${escapeHtml(plan.jd.company)} — ${escapeHtml(plan.jd.role)}</div>
+              <div class="text-stone-600 dark:text-zinc-300 mt-0.5">Missing Skills: ${plan.missingSkills.length ? escapeHtml(plan.missingSkills.join(", ")) : "None (Review Core Skills)"}</div>
+            </div>
+            <button onclick="startProctoredTest('${escapeHtml(plan.jd.id)}', ${JSON.stringify(plan.missingSkills)})"
+              class="interactive-btn px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold cursor-pointer">
+              Take Proctored AI Skill Test (Webcam + Mic) →
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            ${plan.recommendedCourses.map(c => `<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener" class="interactive-card p-3 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 flex items-center justify-between gap-2"><div><div class="font-semibold">${escapeHtml(c.courseTitle)}</div><div class="text-[11px] text-stone-500">${escapeHtml(c.skill)}</div></div><span class="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-semibold">▶ YouTube ↗</span></a>`).join("")}
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            ${plan.prepSteps.map(s => `<div class="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 space-y-1.5"><div class="font-semibold">${escapeHtml(s.day)} · ${escapeHtml(s.focus_topic)}</div><div class="text-stone-500">${escapeHtml(s.mini_task)}</div><a href="${escapeHtml(s.youtube_url)}" target="_blank" rel="noopener" class="inline-block text-rose-600 font-semibold">▶ Watch Course ↗</a></div>`).join("")}
+          </div>
+        </div>
+      `;
+      box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    async function startProctoredTest(jdId, skills) {
+      const res = await apiFetch("/api/student/generate-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jdId, skills })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) return toast(data.error || "Could not start test", "error");
+
+      state.activeTest = data;
+      state.tabSwitches = 0;
+      state.micAudioDetected = false;
+      state.testStartedAt = Date.now();
+
+      document.getElementById("test-modal-title").textContent = `${data.jd.company} — Skill Verification Test`;
+      document.getElementById("test-source-badge").textContent = data.source;
+      document.getElementById("test-tab-warns").textContent = "Tab Switches: 0";
+      document.getElementById("test-result-wrap").classList.add("hidden");
+      document.getElementById("test-footer").classList.remove("hidden");
+
+      document.getElementById("test-questions-wrap").innerHTML = data.questions.map((q, qi) => `
+        <div class="p-4 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 space-y-2 text-xs">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-semibold">Q${qi + 1}. ${escapeHtml(q.question)}</span>
+            <span class="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[10px] font-mono shrink-0">${escapeHtml(q.skill)}</span>
+          </div>
+          <div class="space-y-1.5">
+            ${q.options.map((opt, oi) => `
+              <label class="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 cursor-pointer">
+                <input type="radio" name="test-q-${qi}" value="${oi}" class="accent-blue-600" />
+                <span>${escapeHtml(opt)}</span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+      `).join("");
+
+      const modal = document.getElementById("test-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      startProctoringDevices();
+      startTestTimer(300);
+    }
+
+    async function startProctoringDevices() {
+      const camBadge = document.getElementById("proctor-cam-badge");
+      const micBadge = document.getElementById("proctor-mic-badge");
+      const video = document.getElementById("proctor-video");
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        state.testStream = stream;
+        video.srcObject = stream;
+        camBadge.textContent = "Webcam: Active ✓";
+        camBadge.className = "px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200";
+        micBadge.textContent = "Mic: Active ✓";
+        micBadge.className = "px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200";
+
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          const analyser = ctx.createAnalyser();
+          ctx.createMediaStreamSource(stream).connect(analyser);
+          const buf = new Uint8Array(analyser.frequencyBinCount);
+          const tick = () => {
+            if (!state.activeTest) { ctx.close().catch(() => {}); return; }
+            analyser.getByteFrequencyData(buf);
+            const avg = buf.reduce((a, b) => a + b, 0) / Math.max(buf.length, 1);
+            if (avg > 4) state.micAudioDetected = true;
+            document.getElementById("proctor-mic-meter").style.width = Math.min(100, Math.max(6, Math.round(avg * 2.5))) + "%";
+            requestAnimationFrame(tick);
+          };
+          tick();
+        }
+      } catch (err) {
+        camBadge.textContent = "Webcam: Browser Blocked (Logged)";
+        micBadge.textContent = "Mic: Browser Blocked (Logged)";
+      }
+    }
+
+    function startTestTimer(seconds) {
+      clearInterval(state.testTimerId);
+      let rem = seconds;
+      const update = () => {
+        const m = String(Math.floor(rem / 60)).padStart(2, "0");
+        const s = String(rem % 60).padStart(2, "0");
+        document.getElementById("test-timer").textContent = `${m}:${s}`;
+        if (rem <= 0) { clearInterval(state.testTimerId); submitProctoredTest(); }
+        rem--;
+      };
+      update();
+      state.testTimerId = setInterval(update, 1000);
+    }
+
+    async function submitProctoredTest() {
+      if (!state.activeTest) return;
+      const answers = state.activeTest.questions.map((_, qi) => {
+        const sel = document.querySelector(`input[name="test-q-${qi}"]:checked`);
+        return sel ? parseInt(sel.value, 10) : -1;
+      });
+      const durationSec = Math.round((Date.now() - state.testStartedAt) / 1000);
+      const tracks = state.testStream ? state.testStream.getTracks() : [];
+      const proctoring = {
+        webcamActive: tracks.some(t => t.kind === "video" && t.readyState === "live"),
+        micActive: tracks.some(t => t.kind === "audio" && t.readyState === "live"),
+        micAudioDetected: state.micAudioDetected,
+        tabSwitches: state.tabSwitches,
+        durationSec
+      };
+
+      const res = await apiFetch("/api/student/submit-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ testId: state.activeTest.testId, answers, proctoring })
+      });
+      const data = await res.json();
+      stopProctoringDevices();
+      if (!res.ok || !data.ok) return toast(data.error || "Submit failed", "error");
+
+      const r = data.result;
+      document.getElementById("test-footer").classList.add("hidden");
+      const wrap = document.getElementById("test-result-wrap");
+      wrap.classList.remove("hidden");
+      wrap.innerHTML = `
+        <div class="p-4 rounded-xl border ${r.passed ? "border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/30" : "border-rose-300 bg-rose-50/50 dark:bg-rose-950/30"} space-y-2 text-xs">
+          <div class="text-sm font-semibold">${r.passed ? "✓ Skill Verification Passed!" : "✕ Verification Not Passed Yet"} — Score: ${r.scorePct}% (${r.correctCount}/${r.totalQuestions})</div>
+          <div class="font-mono text-[11px]">Proctoring: Webcam=${r.proctoring.webcamActive ? "Active" : "Unavailable"} · Mic=${r.proctoring.micActive ? "Active" : "Unavailable"} · Tab Switches=${r.proctoring.tabSwitches}</div>
+          ${r.passed ? `<div>Newly verified skills: <strong>${escapeHtml(r.verifiedSkills.join(", ") || "Applied")}</strong> — your profile &amp; HR Credibility Score have been updated!</div>` : `<div>Watch the linked YouTube courses and retake the test (need >= 60%).</div>`}
+          <button onclick="closeTestModal()" class="interactive-btn mt-2 px-4 py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold cursor-pointer">Back to Student Portal</button>
+        </div>
+      `;
+      await loadStudentPortal();
+    }
+
+    function stopProctoringDevices() {
+      clearInterval(state.testTimerId);
+      if (state.testStream) {
+        state.testStream.getTracks().forEach(t => t.stop());
+        state.testStream = null;
+      }
+      state.activeTest = null;
+    }
+
+    function closeTestModal() {
+      stopProctoringDevices();
+      document.getElementById("test-modal").classList.add("hidden");
+      document.getElementById("test-modal").classList.remove("flex");
     }
 
     async function toggleDayTask(itemId, dayIdx) {
-      if (state.user?.role === "student") {
-        const res = await apiFetch("/api/student/toggle-day", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: itemId, dayIdx })
-        });
-        const data = await res.json();
-        if (res.ok && data.ok) {
-          const rec = state.studentRecords.find(r => r.id === itemId);
-          if (rec) rec.checkedDays = data.checkedDays;
-          renderStudentPortalBody();
-        }
-        return;
-      }
-      const item = state.results.find(r => r.id === itemId);
-      if (!item) return;
-      item.checkedDays[dayIdx] = !item.checkedDays[dayIdx];
-      renderDrawerBody(item);
+      const res = await apiFetch("/api/student/toggle-day", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: itemId, dayIdx })
+      });
+      if (res.ok) await loadStudentPortal();
     }
 
     async function confirmReroute(itemId, companyName) {
@@ -1452,310 +1697,100 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: itemId })
       });
-      if (res.ok) {
-        const rec = state.studentRecords.find(r => r.id === itemId);
-        if (rec) rec.appliedAlt = true;
-        renderStudentPortalBody();
-        toast(`Confirmed transfer to ${companyName}!`);
-      }
+      if (res.ok) { await loadStudentPortal(); toast(`Confirmed transfer to ${companyName}!`); }
     }
 
-    function renderStudentPortalBody() {
-      const el = document.getElementById("student-portal-body");
-      if (!state.studentRecords.length) {
-        el.innerHTML = `
-          <div class="rounded-2xl border border-dashed border-stone-300 dark:border-zinc-700 p-8 text-center space-y-2">
-            <div class="text-sm font-semibold">No verified placement audit yet for ${escapeHtml(state.user?.email || "")}</div>
-            <p class="text-xs text-stone-500 dark:text-zinc-400 max-w-md mx-auto">
-              Once your Placement Cell Admin runs batch verification on your resume PDF, your personal route, 7-day plan, or alternative drive will appear here automatically.
-            </p>
-          </div>
-        `;
-        return;
-      }
-
-      const item = state.studentRecords[state.studentRecords.length - 1];
-      const ex = item.extracted;
-      const rt = item.routing;
-      const jd = state.studentActiveJd || { company: "Target Company" };
-
-      let card = "";
-      if (rt.route === "SHORTLISTED") {
-        card = `
-          <div class="p-5 rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2">
-            <div class="text-sm font-semibold text-emerald-700 dark:text-emerald-300">✓ You are Auto-Shortlisted for ${escapeHtml(jd.company)}!</div>
-            <p class="text-xs text-stone-600 dark:text-zinc-300">${escapeHtml(rt.waiverApproved ? rt.verdictReason : ex.drafted_notification)}</p>
-          </div>
-        `;
-      } else if (rt.route === "PORTFOLIO_EXCEPTION") {
-        card = `
-          <div class="p-5 rounded-2xl border border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20 space-y-3">
-            <div class="text-sm font-semibold text-teal-800 dark:text-teal-300">★ Portfolio Exception — Nominated for Cutoff Waiver</div>
-            <p class="text-xs text-stone-600 dark:text-zinc-300">${escapeHtml(rt.verdictReason)}</p>
-            ${rt.altMatches?.length ? `
-              <div class="p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-xs">
-                <span class="font-semibold">Backup Eligible Drive:</span> ${escapeHtml(rt.altMatches[0].company)} — ${escapeHtml(rt.altMatches[0].role)} (${rt.altMatches[0].fitPct}% fit)
-              </div>
-            ` : ""}
-          </div>
-        `;
-      } else if (rt.route === "UPSKILL_TRACK") {
-        const steps = ex.upskilling_plan_7_days || [];
-        const courses = rt.recommendedCourses || [];
-        const doneCount = steps.filter((_, idx) => item.checkedDays?.[String(idx)]).length;
-        const pct = steps.length ? Math.round((doneCount / steps.length) * 100) : 0;
-        card = `
-          <div class="p-5 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20 space-y-4">
-            <div class="flex items-center justify-between gap-2 flex-wrap">
-              <div>
-                <div class="text-sm font-semibold text-amber-800 dark:text-amber-300">⚡ Upskill Track — Action Plan &amp; YouTube Courses</div>
-                <p class="text-xs text-stone-600 dark:text-zinc-300 mt-0.5">${escapeHtml(rt.verdictReason)}</p>
-              </div>
-              <span class="text-xs font-mono font-semibold">${pct}% complete</span>
-            </div>
-
-            ${courses.length ? `
-              <div class="space-y-2">
-                <div class="text-xs font-semibold">Recommended YouTube Courses for Your Missing Skills</div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  ${courses.map(c => `
-                    <a href="${escapeHtml(c.url)}" target="_blank" rel="noopener"
-                      class="interactive-card p-3 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 flex items-center justify-between gap-3 hover:border-rose-400">
-                      <div class="min-w-0">
-                        <div class="text-xs font-semibold truncate">${escapeHtml(c.courseTitle)}</div>
-                        <div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">${escapeHtml(c.skill)} · ${escapeHtml(c.badge)}</div>
-                      </div>
-                      <span class="shrink-0 px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-semibold">
-                        ▶ Watch Course ↗
-                      </span>
-                    </a>
-                  `).join("")}
-                </div>
-              </div>
-            ` : ""}
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              ${steps.map((s, idx) => {
-                const checked = !!item.checkedDays?.[String(idx)];
-                return `
-                  <label class="interactive-card p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 space-y-2 cursor-pointer flex flex-col justify-between">
-                    <div class="space-y-1.5">
-                      <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold">${escapeHtml(s.day)}</span>
-                        <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleDayTask('${item.id}', ${idx})" class="accent-blue-600" />
-                      </div>
-                      <div class="text-xs font-medium">${escapeHtml(s.focus_topic)}</div>
-                      <div class="text-[11px] text-stone-500 dark:text-zinc-400">${escapeHtml(s.mini_task)}</div>
-                    </div>
-                    ${s.youtube_url ? `
-                      <a href="${escapeHtml(s.youtube_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"
-                        class="interactive-btn inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-[11px] font-semibold">
-                        ▶ Watch YouTube Tutorial ↗
-                      </a>
-                    ` : ""}
-                  </label>
-                `;
-              }).join("")}
-            </div>
-          </div>
-        `;
-      } else if (rt.altMatches?.length) {
-        const alt = rt.altMatches[0];
-        const applied = !!item.appliedAlt;
-        card = `
-          <div class="p-5 rounded-2xl border border-sky-200 dark:border-sky-800 bg-sky-50/40 dark:bg-sky-950/20 space-y-3">
-            <div class="text-sm font-semibold text-sky-800 dark:text-sky-300">↪ Auto-Rerouted to Better-Fit Placement Drive</div>
-            <p class="text-xs text-stone-600 dark:text-zinc-300">${escapeHtml(rt.verdictReason)}</p>
-            <div class="p-4 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <div class="text-xs font-semibold">${escapeHtml(alt.company)} — ${escapeHtml(alt.role)}</div>
-                <div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">${alt.fitPct}% verified skill match · ${escapeHtml(alt.ctc || "Active Drive")}</div>
-              </div>
-              <button onclick="confirmReroute('${item.id}', ${JSON.stringify(alt.company)})"
-                class="interactive-btn px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer ${
-                  applied ? "bg-emerald-600 text-white" : "bg-blue-600 text-white"
-                }">
-                ${applied ? "✓ Drive Confirmed" : "Confirm Auto-Reroute"}
-              </button>
-            </div>
-          </div>
-        `;
-      } else {
-        card = `
-          <div class="p-5 rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20 text-xs">
-            <div class="text-sm font-semibold text-rose-700 dark:text-rose-300">Eligibility Hold</div>
-            <p class="mt-1 text-stone-600 dark:text-zinc-300">${escapeHtml(rt.verdictReason)}</p>
-          </div>
-        `;
-      }
-
-      el.innerHTML = `
-        <div class="space-y-4">
-          <div class="flex items-center justify-between gap-2 flex-wrap">
-            <div>
-              <div class="text-xs text-stone-500 dark:text-zinc-400">Verified Academic &amp; Skill Profile</div>
-              <div class="text-base font-semibold">${escapeHtml(ex.student_name)} · ${escapeHtml(rt.normalizedBranch)} (${ex.cgpa} CGPA)</div>
-            </div>
-            ${routePill(rt)}
-          </div>
-          ${card}
-        </div>
-      `;
+    // ==================== EXPORTS, TABS, MODALS ====================
+    function renderEmailQueue(okItems) {
+      const jd = state.jds.find(j => j.id === state.activeJdId) || { company: "Company" };
+      document.getElementById("email-queue").innerHTML = okItems.length ? okItems.map(item => {
+        const ex = item.extracted, rt = item.routing;
+        const body = ex.drafted_notification || rt.verdictReason;
+        const mailto = `mailto:${encodeURIComponent(ex.email)}?subject=${encodeURIComponent(`[Placement Cell] ${jd.company} — ${rt.routeLabel}`)}&body=${encodeURIComponent(body)}`;
+        return `<div class="p-3.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-950 text-xs space-y-2"><div class="flex justify-between gap-2"><span class="font-semibold">${escapeHtml(ex.student_name)} &lt;${escapeHtml(ex.email)}&gt;</span>${routePill(rt)}</div><p class="text-stone-600 dark:text-zinc-300">${escapeHtml(body)}</p><div class="flex gap-2"><button onclick="copyText(${JSON.stringify(body)}, 'Copied!')" class="interactive-btn px-2.5 py-1 rounded-lg border border-stone-200 dark:border-zinc-700 cursor-pointer">Copy</button><a href="${mailto}" class="interactive-btn px-2.5 py-1 rounded-lg bg-blue-600 text-white">Open Mail ↗</a></div></div>`;
+      }).join("") : `<div class="text-xs text-stone-500 py-8 text-center">No notifications generated yet.</div>`;
     }
 
     function downloadShortlistCSV() {
-      const okItems = state.results.filter(r => r.status === "ok" && r.routing.route === "SHORTLISTED");
-      if (!okItems.length) {
-        toast("No shortlisted candidates to export yet.", "error");
-        return;
-      }
-      const rows = [["Name", "Email", "Branch", "CGPA", "Backlogs", "Fit %", "Verified Skills", "Project Summary"]];
-      okItems.forEach(item => {
-        const ex = item.extracted;
-        rows.push([
-          ex.student_name,
-          ex.email,
-          item.routing.normalizedBranch,
-          ex.cgpa,
-          ex.active_backlogs,
-          item.routing.matchPct + "%",
-          ex.verified_skills.map(v => v.skill).join("; "),
-          ex.project_summary
-        ]);
-      });
-      const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-      downloadBlob(csv, `${state.activeJdId}_hr_shortlist.csv`, "text/csv");
-      toast("Downloaded HR Shortlist CSV!");
+      const ok = state.results.filter(r => r.status === "ok" && r.routing.route === "SHORTLISTED");
+      if (!ok.length) return toast("No shortlisted candidates yet.", "error");
+      const rows = [["Name", "Email", "Branch", "ERP CGPA", "Semester", "Credibility", "Verified Skills"]];
+      ok.forEach(i => rows.push([i.extracted.student_name, i.extracted.email, i.routing.normalizedBranch, i.routing.erpVerification?.officialCgpa ?? i.extracted.cgpa, i.routing.erpVerification?.officialSemester ?? 7, i.routing.credibility?.score ?? 0, i.extracted.verified_skills.map(v => v.skill).join("; ")]));
+      downloadBlob(rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n"), `${state.activeJdId}_shortlist.csv`, "text/csv");
     }
-
     function downloadAuditJSON() {
-      if (!state.results.length) {
-        toast("No processed records to export.", "error");
-        return;
-      }
-      const clean = state.results.map(({ fileName, status, extracted, routing, meta, error }) => ({
-        fileName, status, extracted, routing, meta, error
-      }));
-      downloadBlob(JSON.stringify(clean, null, 2), `${state.activeJdId}_audit_report.json`, "application/json");
-      toast("Downloaded Full Audit JSON!");
+      if (!state.results.length) return toast("No records.", "error");
+      downloadBlob(JSON.stringify(state.results, null, 2), `${state.activeJdId}_audit.json`, "application/json");
     }
-
     function copyShortlistedEmails() {
-      const emails = state.results
-        .filter(r => r.status === "ok" && r.routing.route === "SHORTLISTED")
-        .map(r => r.extracted.email)
-        .filter(Boolean);
-      if (!emails.length) {
-        toast("No shortlisted emails to copy.", "error");
-        return;
-      }
-      copyText(emails.join(", "), `Copied ${emails.length} shortlisted email(s)!`);
+      const emails = state.results.filter(r => r.status === "ok" && r.routing.route === "SHORTLISTED").map(r => r.extracted.email).filter(Boolean);
+      if (!emails.length) return toast("No shortlisted emails.", "error");
+      copyText(emails.join(", "), `Copied ${emails.length} email(s)!`);
     }
-
     function downloadBlob(content, filename, mime) {
-      const blob = new Blob([content], { type: mime });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      const url = URL.createObjectURL(new Blob([content], { type: mime }));
+      const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
     }
 
     function switchTab(tab) {
-      ["router", "actions", "student"].forEach(t => {
+      ["router", "analytics", "actions", "hr", "student"].forEach(t => {
         document.getElementById("tab-" + t).classList.toggle("hidden", t !== tab);
         const btn = document.getElementById("tab-btn-" + t);
-        btn.className = `interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer ${
-          t === tab
-            ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm"
-            : "text-stone-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-        }`;
+        if (btn) {
+          btn.className = `interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer ${
+            t === tab ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm" : "text-stone-600 dark:text-zinc-400"
+          } ${btn.classList.contains("hidden") ? "hidden" : ""}`;
+        }
       });
+      if (tab === "analytics") loadCollegeAnalytics();
     }
 
-    function openKeyModal() {
-      const m = document.getElementById("key-modal");
-      m.classList.remove("hidden");
-      m.classList.add("flex");
-    }
-    function closeKeyModal() {
-      const m = document.getElementById("key-modal");
-      m.classList.add("hidden");
-      m.classList.remove("flex");
-    }
+    function openKeyModal() { document.getElementById("key-modal").classList.remove("hidden"); document.getElementById("key-modal").classList.add("flex"); }
+    function closeKeyModal() { document.getElementById("key-modal").classList.add("hidden"); document.getElementById("key-modal").classList.remove("flex"); }
     async function saveApiKey() {
       const key = document.getElementById("api-key-input").value.trim();
       if (!key) return;
-      const res = await apiFetch("/api/config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: key })
-      });
-      if (res.ok) {
-        closeKeyModal();
-        await checkHealth();
-        toast("Gemini API key saved locally!");
-      } else {
-        toast("Failed to save key", "error");
+      const res = await apiFetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey: key }) });
+      if (res.ok) { closeKeyModal(); await checkHealth(); toast("Gemini API key saved!"); } else toast("Failed to save key", "error");
+    }
+
+    function openJDModal() { document.getElementById("jd-modal").classList.remove("hidden"); document.getElementById("jd-modal").classList.add("flex"); }
+    function closeJDModal() { document.getElementById("jd-modal").classList.add("hidden"); document.getElementById("jd-modal").classList.remove("flex"); }
+    async function saveCustomJD() {
+      const payload = {
+        company: document.getElementById("jd-company").value.trim() || "Custom Company",
+        role: document.getElementById("jd-role").value.trim() || "Software Engineer",
+        ctc: document.getElementById("jd-ctc").value.trim() || "Competitive",
+        minCgpa: parseFloat(document.getElementById("jd-cgpa").value) || 7.0,
+        maxBacklogs: parseInt(document.getElementById("jd-backlogs").value, 10) || 0,
+        allowedBranches: document.getElementById("jd-branches").value.split(",").map(s => s.trim().toUpperCase()).filter(Boolean),
+        mustHaveSkills: document.getElementById("jd-skills").value.split(",").map(s => s.trim()).filter(Boolean)
+      };
+      const res = await apiFetch("/api/college/jds", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        state.jds.unshift(data.jd);
+        state.activeJdId = data.jd.id;
+        renderJDs();
+        closeJDModal();
+        toast(`Added ${data.jd.company}`);
       }
-    }
-
-    function openJDModal() {
-      const m = document.getElementById("jd-modal");
-      m.classList.remove("hidden");
-      m.classList.add("flex");
-    }
-    function closeJDModal() {
-      const m = document.getElementById("jd-modal");
-      m.classList.add("hidden");
-      m.classList.remove("flex");
-    }
-    function saveCustomJD() {
-      const company = document.getElementById("jd-company").value.trim() || "Custom Company";
-      const role = document.getElementById("jd-role").value.trim() || "Software Engineer";
-      const ctc = document.getElementById("jd-ctc").value.trim() || "Competitive";
-      const minCgpa = parseFloat(document.getElementById("jd-cgpa").value) || 7.0;
-      const maxBacklogs = parseInt(document.getElementById("jd-backlogs").value, 10) || 0;
-      const allowedBranches = document.getElementById("jd-branches").value.split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
-      const mustHaveSkills = document.getElementById("jd-skills").value.split(",").map(s => s.trim()).filter(Boolean);
-
-      const id = "custom_" + Date.now();
-      state.jds.unshift({ id, company, role, ctc, minCgpa, allowedBranches, maxBacklogs, mustHaveSkills, goodToHaveSkills: [] });
-      state.activeJdId = id;
-      renderJDs();
-      closeJDModal();
-      toast(`Added ${company}`);
     }
 
     function addLog(msg) {
       const el = document.getElementById("exec-log");
-      const div = document.createElement("div");
-      div.textContent = msg;
-      el.appendChild(div);
-      el.scrollTop = el.scrollHeight;
+      const d = document.createElement("div"); d.textContent = msg; el.appendChild(d); el.scrollTop = el.scrollHeight;
     }
-
-    function copyText(text, successMsg) {
-      navigator.clipboard.writeText(text).then(() => toast(successMsg || "Copied!"));
-    }
-
+    function copyText(text, msg) { navigator.clipboard.writeText(text).then(() => toast(msg || "Copied!")); }
     function toast(msg, type = "info") {
       const wrap = document.getElementById("toast-wrap");
       const el = document.createElement("div");
-      el.className = `pointer-events-auto px-3.5 py-2.5 rounded-xl text-xs font-medium shadow-lg border ${
-        type === "error"
-          ? "bg-rose-600 text-white border-rose-700"
-          : "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-800 dark:border-stone-200"
-      }`;
+      el.className = `pointer-events-auto px-3.5 py-2.5 rounded-xl text-xs font-medium shadow-lg border ${type === "error" ? "bg-rose-600 text-white border-rose-700" : "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-800"}`;
       el.textContent = msg;
       wrap.appendChild(el);
       setTimeout(() => el.remove(), 2800);
     }
-
-    function escapeHtml(str) {
-      return String(str ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
-    }
+    function escapeHtml(str) { return String(str ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
 
     init();
   </script>

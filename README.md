@@ -2,42 +2,29 @@
 
 **SYNCHRONISE 2026 (Department of ISE, Ramaiah Institute of Technology) · Domain: Campus Automation (`PS-CA4`)**
 
-PlaceFlow AI is an end-to-end automated placement screening pipeline (not a standalone prompt wrapper) combining **Gemini multimodal PDF verification** with a **deterministic Python rule engine** and **4-track Auto-Router**.
+PlaceFlow AI is an end-to-end automated placement suite (not a standalone prompt wrapper) with **3 isolated portals** (College Placement Cell, HR Recruiter, and Student), **College ERP Academic Verification**, **YouTube Skill Roadmaps**, and **Webcam/Mic AI-Proctored Skill Verification Tests**.
 
-## Key Features
-- **Multimodal Batch PDF Audit:** Sends raw student resume PDFs directly to Gemini (`inlineData` / `application/pdf`) using a strict 12-field `responseSchema`.
-- **Buzzword vs. Proof Verification:** Distinguishes `verified_skills` (backed by real projects/internships) from `unverified_claims` (skills listed with zero supporting evidence).
-- **Deterministic Cutoff Engine:** Pure Python checks for `CGPA >= minCgpa`, normalized `branch`, and `active_backlogs <= maxBacklogs`.
-- **4-Track Auto-Router:**
-  1. **Shortlisted:** Passes cutoffs and verified skill threshold → exported in the HR Shortlist `.csv`.
-  2. **Portfolio Exception:** Fails academic cutoffs but has strong verified projects (`>= 75%` fit, `0` unverified claims) → nominated for a Coordinator Cutoff Waiver.
-  3. **Upskill Track:** Passes cutoffs with skill gaps or unverified claims → assigned an interactive 7-day mini-project roadmap.
-  4. **Cross-JD Auto-Reroute:** Fails primary cutoffs without exception threshold → automatically matched against other active company drives.
-- **Fault-Tolerant Backend:** Sequential throttling, exponential backoff retries on `429`/`503`, and automatic model fallback (`gemini-3.8-flash` → `gemini-3.7-flash` → `gemini-3.6-flash` → `gemini-3.5-flash-lite`).
+## 3-Portal Role-Based Access Control
+1. **College Placement Cell (`admin@rit.edu` / `RIT-COLLEGE-2026`):**
+   - Multimodal Gemini PDF verification (`inlineData` + 12-field `responseSchema`) with automatic Flash model fallback.
+   - **College ERP Verification (`erp_db.py`):** Cross-checks resume CGPA, Semester, Branch, and Backlogs against official College ERP records.
+   - **4-Track Auto-Router:** `Shortlisted`, `Portfolio Exception` (Cutoff Waiver), `Upskill Track`, and `Cross-JD Auto-Reroute`.
+   - **Branch Stats & Analytics:** Branchwise shortlists, resume acceptance rate % per branch, and top lacking personal skills.
+2. **HR / Recruiter Portal (`hr@cloudbackend.com` / `RIT-HR-2026`):**
+   - Inspects verified candidates with a **0–100 Credibility Score** (ERP match + Project proof + Zero buzzwords + Proctored test bonus), branch filtering, and HR Shortlist CSV export.
+3. **Student Portal (`<student>@rit.edu`, e.g. `ananya.rao@rit.edu` / `RIT-STUDENT-2026`):**
+   - Displays personal ERP profile & application status, **Campus Opportunities & Full JD Viewer**, **"Prepare for Specific JD"** roadmaps with curated **YouTube course links**, and a **Webcam + Mic AI-Proctored Skill Test** that verifies lacking skills upon passing.
 
 ## Quick Start (Zero Dependencies — Python 3.10+)
-
-### macOS
-1. Double-click `start.command`, or run in Terminal:
-   ```bash
-   python3 server.py
-   ```
+1. Run `python3 server.py` (or double-click `start.command` on macOS / `start_windows.bat` on Windows).
 2. Open `http://127.0.0.1:8765` in Chrome.
-3. **Role-Based Access Control:**
-   - **Placement Admin (`admin@rit.edu` / `RIT-ADMIN-2026`):** Sees **only** the Auto-Router, Waiver Controls, Gemini API Settings, and HR Export & Emails.
-   - **Student Portal (`<student>@rit.edu`, e.g., `kiran.gowda@rit.edu` / `RIT-STUDENT-2026`):** Sees **only** their own verified placement status, 7-day upskilling checklist, or rerouted drive.
-4. As Admin, click **Set Gemini Key** in the top-right bar (saved locally to `.env`, ignored by Git), then click **Load 5 Sample RIT PDFs** → **Verify & Route Batch**.
-
-### Windows / Linux
-1. Run `start_windows.bat` (Windows) or in Command Prompt / Terminal:
-   ```bash
-   python server.py
-   ```
-2. Open `http://127.0.0.1:8765` in your browser.
+3. Sign in as **College** → click **Set Gemini Key** → **Load 5 Sample RIT PDFs** → **Verify & Route Batch**.
+4. Open extra Chrome tabs to test **HR Recruiter** and **Student** portals simultaneously.
 
 ## Project Structure
-- `server.py` — Zero-dependency HTTP server (`127.0.0.1:8765`) & API routes
-- `router_engine.py` — Gemini `RESPONSE_SCHEMA`, retry/fallback client, and deterministic auto-router
-- `static/index.html` — Interactive 3-tab dashboard with Light/Dark mode and slide-over dossier drawer
-- `sample_resumes/` — 5 realistic RIT sample `.pdf` resumes covering every routing track
+- `server.py` — Zero-dependency HTTP server (`127.0.0.1:8765`) with 3-role RBAC APIs
+- `erp_db.py` — College Academic ERP Database & HR Credibility Score engine
+- `router_engine.py` — Gemini audit client, deterministic rules, YouTube course resolver, and AI skill test generator/grader
+- `static/index.html` — Role-isolated UI for College, HR, and Student portals (Light/Dark mode)
+- `sample_resumes/` — 5 realistic RIT sample `.pdf` resumes
 - `test_server.py` — Automated verification tests (`python3 test_server.py`)

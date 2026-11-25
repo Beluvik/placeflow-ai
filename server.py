@@ -1,20 +1,27 @@
-"""Local zero-dependency HTTP server with Role-Based Access Control for PlaceFlow AI."""
+"""Local zero-dependency HTTP server with 3-portal RBAC (College, HR, Student)."""
 
 import base64
+import copy
 import json
 import os
 import secrets
 import threading
 import time
+from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
+from erp_db import COLLEGE_ERP_DB, verify_against_erp
 from router_engine import (
     DEFAULT_JDS,
     GEMINI_MODELS,
+    build_jd_prep_plan,
     call_gemini_audit,
     evaluate_deterministic_rules,
+    generate_skill_test,
+    grade_skill_test,
 )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -25,14 +32,17 @@ ENV_PATH = BASE_DIR / ".env"
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("PORT", "8765"))
 
-ADMIN_EMAIL = os.environ.get("PLACEFLOW_ADMIN_EMAIL", "admin@rit.edu").lower()
-ADMIN_PASSCODE = os.environ.get("PLACEFLOW_ADMIN_PASSCODE", "RIT-ADMIN-2026")
+COLLEGE_EMAIL = os.environ.get("PLACEFLOW_COLLEGE_EMAIL", "admin@rit.edu").lower()
+COLLEGE_PASSCODE = os.environ.get("PLACEFLOW_COLLEGE_PASSCODE", "RIT-COLLEGE-2026")
+HR_PASSCODE = os.environ.get("PLACEFLOW_HR_PASSCODE", "RIT-HR-2026")
 STUDENT_PASSCODE = os.environ.get("PLACEFLOW_STUDENT_PASSCODE", "RIT-STUDENT-2026")
 
 _LOCK = threading.Lock()
 SESSIONS: dict[str, dict[str, str]] = {}
 RESULTS_STORE: list[dict[str, Any]] = []
-ACTIVE_JD_SNAPSHOT: dict[str, Any] = DEFAULT_JDS[0]
+JDS_STORE: list[dict[str, Any]] = copy.deepcopy(DEFAULT_JDS)
+ACTIVE_JD_SNAPSHOT: dict[str, Any] = JDS_STORE[0]
+TESTS_STORE: dict[str, dict[str, Any]] = {}
 
 
 def load_api_key() -> str:
@@ -69,10 +79,124 @@ def mask_key(key: str) -> str:
     return f"{key[:6]}...{key[-4:]}"
 
 
-class PlaceFlowHandler(BaseHTTPRequestHandler):
-    """Serves PlaceFlow AI with strict Admin vs Student role isolation."""
+def _build_college_analytics() -> dict[str, Any]:
+    """Compute branchwise shortlist counts, acceptance rates, and lacking skills."""
+    with _LOCK:
+        ok_items = [r for r in RESULTS_STORE if r.get("status") == "ok"]
+        active_jd = dict(ACTIVE_JD_SNAPSHOT)
 
-    server_version = "PlaceFlowAI/2.0"
+    branches: dict[str, dict[str, Any]] = {}
+    skill_gaps: Counter[str] = Counter()
+
+    for r in ok_items:
+        rt = r.get("routing", {})
+        ex = r.get("extracted", {})
+        br = str(rt.get("normalizedBranch") or "UNKNOWN")
+        bucket = branches.setdefault(
+            br,
+            {
+                "branch": br,
+                "total": 0,
+                "shortlisted": 0,
+                "exception": 0,
+                "upskill": 0,
+                "rerouted": 0,
+                "acceptanceRatePct": 0,
+            },
+        )
+        bucket["total"] += 1
+        route = rt.get("route")
+        if route == "SHORTLISTED":
+            bucket["shortlisted"] += 1
+        elif route == "PORTFOLIO_EXCEPTION":
+            bucket["exception"] += 1
+        elif route == "UPSKILL_TRACK":
+            bucket["upskill"] += 1
+        else:
+            bucket["rerouted"] += 1
+
+        for sk in rt.get("missingMustHave", []) or []:
+            skill_gaps[str(sk)] += 1
+        for cl in ex.get("unverified_claims", []) or []:
+            if cl.get("skill"):
+                skill_gaps[f"{cl['skill']} (Unverified)"] += 1
+
+    branch_list = []
+    for br_info in branches.values():
+        tot = max(br_info["total"], 1)
+        br_info["acceptanceRatePct"] = round((br_info["shortlisted"] / tot) * 100)
+        branch_list.append(br_info)
+    branch_list.sort(key=lambda b: (-b["acceptanceRatePct"], b["branch"]))
+
+    top_lacking = [{"skill": k, "count": v} for k, v in skill_gaps.most_common(8)]
+    erp_dir = [{"email": email, **info} for email, info in sorted(COLLEGE_ERP_DB.items())]
+
+    total_ok = len(ok_items)
+    total_shortlisted = sum(1 for r in ok_items if r.get("routing", {}).get("route") == "SHORTLISTED")
+    overall_rate = round((total_shortlisted / total_ok) * 100) if total_ok else 0
+
+    return {
+        "totalEvaluated": total_ok,
+        "totalShortlisted": total_shortlisted,
+        "overallAcceptanceRatePct": overall_rate,
+        "branchStats": branch_list,
+        "topLackingSkills": top_lacking,
+        "erpDirectory": erp_dir,
+        "activeJd": active_jd,
+    }
+
+
+def _find_student_profile(email: str) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """Return latest evaluated record for student plus fallback academic profile from ERP."""
+    key = email.strip().lower()
+    with _LOCK:
+        own_records = [
+            r
+            for r in RESULTS_STORE
+            if r.get("status") == "ok"
+            and str(r.get("extracted", {}).get("email", "")).strip().lower() == key
+        ]
+        latest = own_records[-1] if own_records else None
+        active_jd = dict(ACTIVE_JD_SNAPSHOT)
+
+    if latest:
+        return latest, active_jd
+
+    erp = COLLEGE_ERP_DB.get(key)
+    if erp:
+        fallback_extracted = {
+            "student_name": erp["name"],
+            "email": key,
+            "branch": erp["branch"],
+            "cgpa": erp["cgpa"],
+            "active_backlogs": erp["active_backlogs"],
+            "graduation_year": erp["graduation_year"],
+            "verified_skills": [],
+            "unverified_claims": [],
+        }
+        return {"extracted": fallback_extracted, "id": None}, active_jd
+
+    return (
+        {
+            "extracted": {
+                "student_name": key.split("@", 1)[0].title(),
+                "email": key,
+                "branch": "CSE",
+                "cgpa": 7.5,
+                "active_backlogs": 0,
+                "verified_skills": [],
+                "unverified_claims": [],
+            },
+            "id": None,
+        },
+        active_jd,
+    )
+
+
+class PlaceFlowHandler(BaseHTTPRequestHandler):
+    """Serves PlaceFlow AI with strict College, HR, and Student role isolation."""
+
+    server_version = "PlaceFlowAI/3.0"
 
     def log_message(self, format: str, *args: Any) -> None:
         return
@@ -104,17 +228,17 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
         with _LOCK:
             return SESSIONS.get(token)
 
-    def _require_role(self, required_role: str) -> dict[str, str] | None:
+    def _require_role(self, *allowed_roles: str) -> dict[str, str] | None:
         session = self._get_session()
         if not session:
             self._send_json(401, {"error": "Authentication required. Please sign in."})
             return None
-        if session["role"] != required_role:
+        if session["role"] not in allowed_roles:
             self._send_json(
                 403,
                 {
                     "error": (
-                        f"Access denied: this endpoint is restricted to {required_role} accounts "
+                        f"Access denied: restricted to {', '.join(allowed_roles)} portal "
                         f"(signed in as {session['role']})."
                     )
                 },
@@ -123,7 +247,9 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
         return session
 
     def do_GET(self) -> None:
-        path = self.path.split("?", 1)[0]
+        parsed_url = urlparse(self.path)
+        path = parsed_url.path
+        qs = parse_qs(parsed_url.query)
 
         if path == "/" or path == "/index.html":
             html_file = STATIC_DIR / "index.html"
@@ -150,20 +276,14 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
             )
             return
 
-        if path == "/api/me":
-            session = self._get_session()
-            if not session:
-                self._send_json(401, {"error": "Not signed in."})
-                return
-            self._send_json(200, {"ok": True, "user": session})
-            return
-
         if path == "/api/jds":
-            self._send_json(200, {"jds": DEFAULT_JDS})
+            with _LOCK:
+                jds_copy = copy.deepcopy(JDS_STORE)
+            self._send_json(200, {"jds": jds_copy})
             return
 
         if path == "/api/demo-resumes":
-            if not self._require_role("admin"):
+            if not self._require_role("college"):
                 return
             files = []
             for pdf in sorted(SAMPLE_DIR.glob("*.pdf")):
@@ -178,18 +298,59 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"files": files})
             return
 
-        if path == "/api/admin/results":
-            if not self._require_role("admin"):
+        if path == "/api/college/results":
+            if not self._require_role("college"):
                 return
             with _LOCK:
                 self._send_json(
                     200,
                     {
                         "ok": True,
-                        "results": list(RESULTS_STORE),
-                        "activeJd": ACTIVE_JD_SNAPSHOT,
+                        "results": copy.deepcopy(RESULTS_STORE),
+                        "activeJd": dict(ACTIVE_JD_SNAPSHOT),
                     },
                 )
+            return
+
+        if path == "/api/college/analytics":
+            if not self._require_role("college"):
+                return
+            self._send_json(200, {"ok": True, **_build_college_analytics()})
+            return
+
+        if path == "/api/hr/candidates":
+            if not self._require_role("hr"):
+                return
+            branch_filter = (qs.get("branch", [""])[0] or "").strip().upper()
+            include_all = qs.get("includeAll", ["0"])[0] == "1"
+            with _LOCK:
+                items = copy.deepcopy(RESULTS_STORE)
+                active_jd = dict(ACTIVE_JD_SNAPSHOT)
+
+            candidates = []
+            for r in items:
+                if r.get("status") != "ok":
+                    continue
+                route = r.get("routing", {}).get("route")
+                if not include_all and route not in ("SHORTLISTED", "PORTFOLIO_EXCEPTION"):
+                    continue
+                br = str(r.get("routing", {}).get("normalizedBranch") or "").upper()
+                if branch_filter and branch_filter != "ALL" and br != branch_filter:
+                    continue
+                candidates.append(r)
+
+            candidates.sort(
+                key=lambda x: x.get("routing", {}).get("credibility", {}).get("score", 0),
+                reverse=True,
+            )
+            self._send_json(
+                200,
+                {
+                    "ok": True,
+                    "activeJd": active_jd,
+                    "candidates": candidates,
+                },
+            )
             return
 
         if path == "/api/student/me":
@@ -199,20 +360,41 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
             student_email = session["email"].lower()
             with _LOCK:
                 own_records = [
-                    r
+                    copy.deepcopy(r)
                     for r in RESULTS_STORE
                     if r.get("status") == "ok"
                     and str(r.get("extracted", {}).get("email", "")).strip().lower()
                     == student_email
                 ]
-                jd_info = dict(ACTIVE_JD_SNAPSHOT)
+                jds_copy = copy.deepcopy(JDS_STORE)
+                active_jd = dict(ACTIVE_JD_SNAPSHOT)
+
+            erp_rec = COLLEGE_ERP_DB.get(student_email)
+            base_profile, _ = _find_student_profile(student_email)
+            opportunities = [
+                {
+                    "jd": jd,
+                    **build_jd_prep_plan(base_profile["extracted"], jd),
+                    "eligible": (
+                        float(base_profile["extracted"].get("cgpa") or 0) >= float(jd["minCgpa"])
+                        and base_profile["extracted"].get("branch", "").upper()
+                        in [b.upper() for b in jd["allowedBranches"]]
+                        and int(base_profile["extracted"].get("active_backlogs") or 0)
+                        <= int(jd["maxBacklogs"])
+                    ),
+                }
+                for jd in jds_copy
+            ]
+
             self._send_json(
                 200,
                 {
                     "ok": True,
                     "student": session,
+                    "erpRecord": erp_rec,
                     "records": own_records,
-                    "activeJd": jd_info,
+                    "activeJd": active_jd,
+                    "opportunities": opportunities,
                 },
             )
             return
@@ -229,19 +411,26 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                 email = str(body.get("email", "")).strip().lower()
                 passcode = str(body.get("passcode", "")).strip()
 
-                if role == "admin":
-                    if email != ADMIN_EMAIL or passcode != ADMIN_PASSCODE:
-                        self._send_json(401, {"error": "Invalid Admin email or passcode."})
+                if role == "college":
+                    if email != COLLEGE_EMAIL or passcode != COLLEGE_PASSCODE:
+                        self._send_json(401, {"error": "Invalid College Admin email or passcode."})
                         return
-                    user = {"role": "admin", "email": email, "name": "Placement Coordinator"}
+                    user = {"role": "college", "email": email, "name": "RIT Placement Cell"}
+                elif role == "hr":
+                    if not email or "@" not in email or passcode != HR_PASSCODE:
+                        self._send_json(401, {"error": "Invalid HR Recruiter email or passcode."})
+                        return
+                    company = email.split("@", 1)[1].split(".", 1)[0].title()
+                    user = {"role": "hr", "email": email, "name": f"{company} Recruiter"}
                 elif role == "student":
                     if not email or "@" not in email or passcode != STUDENT_PASSCODE:
                         self._send_json(401, {"error": "Invalid Student email or passcode."})
                         return
-                    local = email.split("@", 1)[0].replace(".", " ").title()
-                    user = {"role": "student", "email": email, "name": local}
+                    erp = COLLEGE_ERP_DB.get(email)
+                    name = erp["name"] if erp else email.split("@", 1)[0].replace(".", " ").title()
+                    user = {"role": "student", "email": email, "name": name}
                 else:
-                    self._send_json(400, {"error": "Role must be 'admin' or 'student'."})
+                    self._send_json(400, {"error": "Role must be 'college', 'hr', or 'student'."})
                     return
 
                 token = secrets.token_urlsafe(24)
@@ -260,7 +449,7 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/config":
-            if not self._require_role("admin"):
+            if not self._require_role("college"):
                 return
             try:
                 body = self._read_json()
@@ -274,16 +463,68 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                 self._send_json(400, {"error": str(exc)})
             return
 
-        if path == "/api/admin/clear":
-            if not self._require_role("admin"):
+        if path == "/api/college/jds":
+            if not self._require_role("college"):
+                return
+            try:
+                body = self._read_json()
+                jd = {
+                    "id": str(body.get("id") or f"custom_{int(time.time() * 1000)}"),
+                    "company": str(body.get("company") or "Custom Company"),
+                    "role": str(body.get("role") or "Software Engineer"),
+                    "ctc": str(body.get("ctc") or "Competitive"),
+                    "minCgpa": float(body.get("minCgpa") or 7.0),
+                    "allowedBranches": [
+                        str(b).strip().upper()
+                        for b in (body.get("allowedBranches") or ["CSE", "ISE"])
+                        if str(b).strip()
+                    ],
+                    "maxBacklogs": int(body.get("maxBacklogs") or 0),
+                    "mustHaveSkills": [
+                        str(s).strip() for s in (body.get("mustHaveSkills") or []) if str(s).strip()
+                    ],
+                    "goodToHaveSkills": [
+                        str(s).strip() for s in (body.get("goodToHaveSkills") or []) if str(s).strip()
+                    ],
+                }
+                with _LOCK:
+                    JDS_STORE.insert(0, jd)
+                self._send_json(200, {"ok": True, "jd": jd})
+            except Exception as exc:
+                self._send_json(400, {"error": str(exc)})
+            return
+
+        if path == "/api/college/erp-verify":
+            if not self._require_role("college"):
+                return
+            try:
+                body = self._read_json()
+                res = verify_against_erp(
+                    email=str(body.get("email") or ""),
+                    resume_cgpa=float(body.get("resumeCgpa") or 0.0),
+                    resume_branch=str(body.get("resumeBranch") or ""),
+                    resume_backlogs=int(body.get("resumeBacklogs") or 0),
+                    claimed_semester=(
+                        int(body["claimedSemester"])
+                        if body.get("claimedSemester") not in (None, "")
+                        else None
+                    ),
+                )
+                self._send_json(200, {"ok": True, "erpVerification": res})
+            except Exception as exc:
+                self._send_json(400, {"error": str(exc)})
+            return
+
+        if path == "/api/college/clear":
+            if not self._require_role("college"):
                 return
             with _LOCK:
                 RESULTS_STORE.clear()
             self._send_json(200, {"ok": True})
             return
 
-        if path == "/api/admin/approve-waiver":
-            if not self._require_role("admin"):
+        if path == "/api/college/approve-waiver":
+            if not self._require_role("college"):
                 return
             try:
                 body = self._read_json()
@@ -298,17 +539,17 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     rt["routeLabel"] = "Shortlisted (Waiver)"
                     rt["waiverApproved"] = True
                     rt["verdictReason"] = (
-                        f"Coordinator approved Portfolio Exception waiver ({rt['matchPct']}% verified project fit) "
-                        f"— promoted to HR Shortlist."
+                        f"College Coordinator approved Portfolio Exception waiver ({rt['matchPct']}% verified fit) "
+                        "— promoted to HR Shortlist."
                     )
-                    updated = dict(target)
+                    updated = copy.deepcopy(target)
                 self._send_json(200, {"ok": True, "record": updated})
             except Exception as exc:
                 self._send_json(400, {"error": str(exc)})
             return
 
         if path == "/api/verify-resume":
-            if not self._require_role("admin"):
+            if not self._require_role("college"):
                 return
             started = time.time()
             try:
@@ -317,14 +558,13 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                 if not api_key:
                     self._send_json(
                         400,
-                        {
-                            "error": "No Gemini API key configured. Click 'Set Gemini Key' in the top bar first."
-                        },
+                        {"error": "No Gemini API key configured. Click 'Set Gemini Key' first."},
                     )
                     return
 
-                jd = body.get("jd") or DEFAULT_JDS[0]
-                all_jds = body.get("allJds") or DEFAULT_JDS
+                with _LOCK:
+                    all_jds = body.get("allJds") or copy.deepcopy(JDS_STORE)
+                jd = body.get("jd") or all_jds[0]
                 pdf_b64 = body.get("pdfBase64")
                 resume_text = body.get("resumeText")
                 rec_id = str(body.get("id") or f"rec_{secrets.token_hex(6)}")
@@ -352,6 +592,7 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     },
                     "checkedDays": {},
                     "appliedAlt": False,
+                    "skillTest": None,
                 }
                 with _LOCK:
                     global ACTIVE_JD_SNAPSHOT
@@ -362,6 +603,147 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                 self._send_json(200, {"ok": True, **record})
             except Exception as exc:
                 self._send_json(500, {"error": str(exc)})
+            return
+
+        if path == "/api/student/prepare-jd":
+            session = self._require_role("student")
+            if not session:
+                return
+            try:
+                body = self._read_json()
+                jd_id = str(body.get("jdId") or "")
+                with _LOCK:
+                    target_jd = next((j for j in JDS_STORE if j["id"] == jd_id), JDS_STORE[0])
+                profile, _ = _find_student_profile(session["email"])
+                plan = build_jd_prep_plan(profile["extracted"], target_jd)
+                self._send_json(200, {"ok": True, **plan})
+            except Exception as exc:
+                self._send_json(400, {"error": str(exc)})
+            return
+
+        if path == "/api/student/generate-test":
+            session = self._require_role("student")
+            if not session:
+                return
+            try:
+                body = self._read_json()
+                jd_id = str(body.get("jdId") or "")
+                with _LOCK:
+                    target_jd = next((j for j in JDS_STORE if j["id"] == jd_id), ACTIVE_JD_SNAPSHOT)
+                profile, _ = _find_student_profile(session["email"])
+                plan = build_jd_prep_plan(profile["extracted"], target_jd)
+                skills = body.get("skills") or plan["missingSkills"] or target_jd.get("mustHaveSkills", [])[:2]
+
+                generated = generate_skill_test(
+                    api_key=load_api_key(),
+                    student_name=session["name"],
+                    target_jd=target_jd,
+                    skills=skills,
+                    courses=plan["recommendedCourses"],
+                )
+                test_id = f"test_{secrets.token_hex(6)}"
+                with _LOCK:
+                    TESTS_STORE[test_id] = {
+                        "testId": test_id,
+                        "email": session["email"].lower(),
+                        "jd": target_jd,
+                        "questions": generated["questions"],
+                        "source": generated["source"],
+                    }
+
+                public_qs = [
+                    {
+                        "id": q.get("id", f"q{i+1}"),
+                        "skill": q.get("skill"),
+                        "question": q.get("question"),
+                        "options": q.get("options"),
+                    }
+                    for i, q in enumerate(generated["questions"])
+                ]
+                self._send_json(
+                    200,
+                    {
+                        "ok": True,
+                        "testId": test_id,
+                        "jd": target_jd,
+                        "source": generated["source"],
+                        "questions": public_qs,
+                    },
+                )
+            except Exception as exc:
+                self._send_json(400, {"error": str(exc)})
+            return
+
+        if path == "/api/student/submit-test":
+            session = self._require_role("student")
+            if not session:
+                return
+            try:
+                body = self._read_json()
+                test_id = str(body.get("testId") or "")
+                answers = [int(a) for a in (body.get("answers") or [])]
+                proctoring = body.get("proctoring") or {}
+                student_email = session["email"].lower()
+
+                with _LOCK:
+                    test_obj = TESTS_STORE.get(test_id)
+                if not test_obj or test_obj["email"] != student_email:
+                    self._send_json(404, {"error": "Active test session not found."})
+                    return
+
+                result = grade_skill_test(test_obj["questions"], answers, proctoring)
+
+                # If passed, upgrade the student's verified skills & recompute routing + HR credibility
+                updated_record = None
+                with _LOCK:
+                    target = next(
+                        (
+                            r
+                            for r in reversed(RESULTS_STORE)
+                            if r.get("status") == "ok"
+                            and str(r.get("extracted", {}).get("email", "")).strip().lower()
+                            == student_email
+                        ),
+                        None,
+                    )
+                    if target:
+                        target["skillTest"] = result
+                        if result["passed"]:
+                            verified = target["extracted"].setdefault("verified_skills", [])
+                            existing_lower = {str(v.get("skill", "")).lower() for v in verified}
+                            for sk in result["verifiedSkills"]:
+                                if sk.lower() not in existing_lower:
+                                    verified.append(
+                                        {
+                                            "skill": sk,
+                                            "evidence_source": (
+                                                f"Passed AI-Proctored Skill Test ({result['scorePct']}%, "
+                                                f"Webcam/Mic Logged)"
+                                            ),
+                                        }
+                                    )
+                                    existing_lower.add(sk.lower())
+                            # Remove newly proven skills from unverified_claims
+                            passed_lower = {s.lower() for s in result["verifiedSkills"]}
+                            target["extracted"]["unverified_claims"] = [
+                                c
+                                for c in target["extracted"].get("unverified_claims", [])
+                                if str(c.get("skill", "")).lower() not in passed_lower
+                            ]
+                        target["routing"] = evaluate_deterministic_rules(
+                            target["extracted"],
+                            ACTIVE_JD_SNAPSHOT,
+                            JDS_STORE,
+                            skill_test=result,
+                        )
+                        updated_record = copy.deepcopy(target)
+
+                self._send_json(
+                    200,
+                    {"ok": True, "result": result, "updatedRecord": updated_record},
+                )
+            except Exception as exc:
+                self._send_json(400, {"error": str(exc)})
             return
 
         if path == "/api/student/toggle-day":
@@ -418,7 +800,8 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
 def main() -> None:
     httpd = ThreadingHTTPServer((HOST, PORT), PlaceFlowHandler)
     print(f"PlaceFlow AI running at http://{HOST}:{PORT}")
-    print(f"Admin login:   {ADMIN_EMAIL} / {ADMIN_PASSCODE}")
+    print(f"College login: {COLLEGE_EMAIL} / {COLLEGE_PASSCODE}")
+    print(f"HR login:      hr@cloudbackend.com / {HR_PASSCODE}")
     print(f"Student login: <student>@rit.edu / {STUDENT_PASSCODE}")
     print("Press Ctrl+C to stop.")
     try:

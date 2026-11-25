@@ -9,6 +9,8 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+from erp_db import compute_credibility_score, verify_against_erp
+
 
 def _build_ssl_context() -> ssl.SSLContext:
     """Use certifi or macOS system CA bundle so python.org macOS builds verify TLS cleanly."""
@@ -249,12 +251,27 @@ def build_youtube_courses(
 
 
 def evaluate_deterministic_rules(
-    extracted: dict[str, Any], target_jd: dict[str, Any], all_jds: list[dict[str, Any]]
+    extracted: dict[str, Any],
+    target_jd: dict[str, Any],
+    all_jds: list[dict[str, Any]],
+    skill_test: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Run strict non-AI eligibility rules and 4-track auto-routing."""
-    cgpa = float(extracted.get("cgpa") or 0.0)
-    branch = _normalize_branch(str(extracted.get("branch") or ""))
-    backlogs = int(extracted.get("active_backlogs") or 0)
+    """Run strict non-AI eligibility rules, College ERP verification, and 4-track auto-routing."""
+    resume_cgpa = float(extracted.get("cgpa") or 0.0)
+    resume_branch = _normalize_branch(str(extracted.get("branch") or ""))
+    resume_backlogs = int(extracted.get("active_backlogs") or 0)
+    student_email = str(extracted.get("email") or "").strip().lower()
+
+    erp = verify_against_erp(student_email, resume_cgpa, resume_branch, resume_backlogs)
+    # Use official College ERP record as authoritative truth if student is registered
+    if erp["status"] in ("VERIFIED", "MISMATCH_FLAGGED"):
+        cgpa = float(erp["officialCgpa"])
+        branch = _normalize_branch(str(erp["officialBranch"]))
+        backlogs = int(erp["officialBacklogs"])
+    else:
+        cgpa = resume_cgpa
+        branch = resume_branch
+        backlogs = resume_backlogs
 
     min_cgpa = float(target_jd.get("minCgpa") or 0.0)
     allowed_branches = [b.strip().upper() for b in target_jd.get("allowedBranches", [])]
@@ -361,7 +378,7 @@ def evaluate_deterministic_rules(
 
     recommended_courses = build_youtube_courses(extracted, missing_must_have)
 
-    return {
+    routing = {
         "normalizedBranch": branch,
         "passesCgpa": passes_cgpa,
         "passesBranch": passes_branch,
@@ -373,7 +390,141 @@ def evaluate_deterministic_rules(
         "verdictReason": verdict_reason,
         "altMatches": alt_matches,
         "recommendedCourses": recommended_courses,
+        "erpVerification": erp,
     }
+    routing["credibility"] = compute_credibility_score(extracted, routing, erp, skill_test)
+    return routing
+
+
+TEST_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "questions": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "id": {"type": "STRING"},
+                    "skill": {"type": "STRING"},
+                    "question": {"type": "STRING"},
+                    "options": {"type": "ARRAY", "items": {"type": "STRING"}},
+                    "correctIndex": {"type": "INTEGER"},
+                    "explanation": {"type": "STRING"},
+                },
+                "required": ["id", "skill", "question", "options", "correctIndex", "explanation"],
+            },
+        }
+    },
+    "required": ["questions"],
+}
+
+_FALLBACK_BANK: dict[str, list[dict[str, Any]]] = {
+    "docker": [
+        {
+            "skill": "Docker",
+            "question": "Which Dockerfile instruction defines the default executable run when a container starts and can be overridden at `docker run`?",
+            "options": ["RUN", "CMD", "COPY", "EXPOSE"],
+            "correctIndex": 1,
+            "explanation": "CMD sets default command arguments that can be overridden when starting the container.",
+        },
+        {
+            "skill": "Docker",
+            "question": "In Docker Compose, how do two containers on the same default network communicate cleanly?",
+            "options": [
+                "By hardcoded host 127.0.0.1",
+                "By the service name defined in docker-compose.yml",
+                "By reading /etc/passwd",
+                "Only via SSH",
+            ],
+            "correctIndex": 1,
+            "explanation": "Compose provides built-in DNS resolution by service name.",
+        },
+    ],
+    "rest apis": [
+        {
+            "skill": "REST APIs",
+            "question": "Which HTTP status code is most appropriate when a POST endpoint successfully creates a new resource?",
+            "options": ["200 OK", "201 Created", "204 No Content", "400 Bad Request"],
+            "correctIndex": 1,
+            "explanation": "201 Created indicates a new resource was created on the server.",
+        },
+        {
+            "skill": "REST APIs",
+            "question": "In FastAPI, what validates incoming JSON request bodies automatically using Python type hints?",
+            "options": ["Pydantic BaseModel", "os.environ", "pickle.loads", "HTMLParser"],
+            "correctIndex": 0,
+            "explanation": "FastAPI uses Pydantic models for request validation and OpenAPI schema generation.",
+        },
+    ],
+    "kubernetes": [
+        {
+            "skill": "Kubernetes",
+            "question": "Which Kubernetes object ensures a specified number of Pod replicas are running and handles rolling updates?",
+            "options": ["ConfigMap", "Deployment", "Ingress", "Secret"],
+            "correctIndex": 1,
+            "explanation": "A Deployment manages ReplicaSets and declarative rolling updates for Pods.",
+        },
+    ],
+}
+
+
+def _call_gemini_json(
+    api_key: str,
+    parts: list[dict[str, Any]],
+    schema: dict[str, Any],
+    temperature: float = 0.1,
+) -> dict[str, Any]:
+    """Shared Gemini API caller with retry and Flash model fallback."""
+    if not api_key:
+        raise ValueError("Missing GEMINI_API_KEY. Set your key in Settings first.")
+
+    payload = {
+        "contents": [{"parts": parts}],
+        "generationConfig": {
+            "temperature": temperature,
+            "responseMimeType": "application/json",
+            "responseSchema": schema,
+        },
+    }
+    body_bytes = json.dumps(payload).encode("utf-8")
+    attempts_log: list[str] = []
+    last_error = "Unknown Gemini error"
+
+    for model in GEMINI_MODELS:
+        url = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{model}:generateContent?key={api_key}"
+        )
+        for attempt in range(2):
+            req = urllib.request.Request(
+                url,
+                data=body_bytes,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=45, context=_SSL_CONTEXT) as resp:
+                    raw = json.loads(resp.read().decode("utf-8"))
+                text = raw["candidates"][0]["content"]["parts"][0]["text"]
+                parsed = json.loads(text)
+                attempts_log.append(f"{model} succeeded (try {attempt + 1})")
+                return {"data": parsed, "modelUsed": model, "attemptsLog": attempts_log}
+            except urllib.error.HTTPError as exc:
+                err_body = exc.read().decode("utf-8", errors="replace")
+                last_error = f"HTTP {exc.code} on {model}: {err_body[:300]}"
+                attempts_log.append(last_error)
+                if exc.code in (429, 500, 503, 504):
+                    time.sleep(1.2 * (attempt + 1))
+                    continue
+                if exc.code == 404:
+                    break
+                raise RuntimeError(last_error) from exc
+            except Exception as exc:
+                last_error = f"{model} error: {exc}"
+                attempts_log.append(last_error)
+                break
+
+    raise RuntimeError(f"All Gemini fallback models failed. Last error: {last_error}")
 
 
 def call_gemini_audit(
@@ -383,9 +534,6 @@ def call_gemini_audit(
     resume_text: str | None = None,
 ) -> dict[str, Any]:
     """Call Gemini API directly with retry + model fallback and strict JSON schema."""
-    if not api_key:
-        raise ValueError("Missing GEMINI_API_KEY. Set your key in Settings first.")
-
     instruction = (
         "You are PlaceFlow AI, a strict Campus Placement Cell Resume Verification Auditor.\n"
         "Analyze the student's resume against the target Job Description (JD) below.\n"
@@ -408,55 +556,162 @@ def call_gemini_audit(
     else:
         raise ValueError("Either pdfBase64 or resumeText must be provided.")
 
-    payload = {
-        "contents": [{"parts": parts}],
-        "generationConfig": {
-            "temperature": 0.1,
-            "responseMimeType": "application/json",
-            "responseSchema": RESPONSE_SCHEMA,
-        },
+    res = _call_gemini_json(api_key, parts, RESPONSE_SCHEMA, temperature=0.1)
+    return {
+        "extracted": res["data"],
+        "modelUsed": res["modelUsed"],
+        "attemptsLog": res["attemptsLog"],
     }
-    body_bytes = json.dumps(payload).encode("utf-8")
 
-    attempts_log: list[str] = []
-    last_error = "Unknown Gemini error"
 
-    for model in GEMINI_MODELS:
-        url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{model}:generateContent?key={api_key}"
+def build_jd_prep_plan(extracted: dict[str, Any], target_jd: dict[str, Any]) -> dict[str, Any]:
+    """Build a personalized preparation roadmap and YouTube courses for a chosen JD."""
+    verified_names = [
+        str(v.get("skill", "")).strip()
+        for v in extracted.get("verified_skills", [])
+        if v.get("skill")
+    ]
+    must_have = target_jd.get("mustHaveSkills", [])
+    missing = [s for s in must_have if not _skill_matches(verified_names, s)]
+
+    prep_steps: list[dict[str, str]] = []
+    target_list = missing if missing else must_have[:2]
+    day_buckets = ["Day 1-2", "Day 3-4", "Day 5-7"]
+    for idx, skill in enumerate(target_list[:3]):
+        _, query = SKILL_COURSE_CATALOG.get(
+            skill.strip().lower(),
+            (f"{skill} Full Course", f"{skill} full course project tutorial"),
         )
-        for attempt in range(2):
-            req = urllib.request.Request(
-                url,
-                data=body_bytes,
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
-            try:
-                with urllib.request.urlopen(req, timeout=45, context=_SSL_CONTEXT) as resp:
-                    raw = json.loads(resp.read().decode("utf-8"))
-                text = raw["candidates"][0]["content"]["parts"][0]["text"]
-                parsed = json.loads(text)
-                attempts_log.append(f"{model} succeeded (try {attempt + 1})")
-                return {
-                    "extracted": parsed,
-                    "modelUsed": model,
-                    "attemptsLog": attempts_log,
-                }
-            except urllib.error.HTTPError as exc:
-                err_body = exc.read().decode("utf-8", errors="replace")
-                last_error = f"HTTP {exc.code} on {model}: {err_body[:300]}"
-                attempts_log.append(last_error)
-                if exc.code in (429, 500, 503, 504):
-                    time.sleep(1.2 * (attempt + 1))
-                    continue
-                if exc.code == 404:
-                    break
-                raise RuntimeError(last_error) from exc
-            except Exception as exc:
-                last_error = f"{model} error: {exc}"
-                attempts_log.append(last_error)
-                break
+        prep_steps.append(
+            {
+                "day": day_buckets[idx],
+                "focus_topic": f"Master {skill} Fundamentals & Patterns",
+                "mini_task": f"Watch the linked {skill} course, build 1 verifiable mini-project for {target_jd.get('role')}, and pass the AI Skill Verification Test.",
+                "youtube_query": query,
+                "youtube_url": _youtube_search_url(query),
+            }
+        )
 
-    raise RuntimeError(f"All Gemini fallback models failed. Last error: {last_error}")
+    fake_extracted = {
+        "upskilling_plan_7_days": prep_steps,
+        "unverified_claims": extracted.get("unverified_claims", []),
+    }
+    courses = build_youtube_courses(fake_extracted, missing or must_have[:2])
+    total_req = max(len(must_have), 1)
+    fit_pct = round(((total_req - len(missing)) / total_req) * 100)
+
+    return {
+        "jd": target_jd,
+        "fitPct": fit_pct,
+        "missingSkills": missing,
+        "prepSteps": prep_steps,
+        "recommendedCourses": courses,
+    }
+
+
+def generate_skill_test(
+    api_key: str,
+    student_name: str,
+    target_jd: dict[str, Any],
+    skills: list[str],
+    courses: list[dict[str, str]],
+) -> dict[str, Any]:
+    """Generate a 5-question AI assessment tailored to lacking skills & YouTube course topics."""
+    focus_skills = skills or target_jd.get("mustHaveSkills", [])[:2]
+    course_titles = [c.get("courseTitle", c.get("skill", "")) for c in courses]
+
+    if api_key:
+        prompt = (
+            "You are a technical interviewer creating a 5-question multiple-choice verification test.\n"
+            f"Candidate: {student_name}\n"
+            f"Target Role: {target_jd.get('company')} — {target_jd.get('role')}\n"
+            f"Skills to Verify: {', '.join(focus_skills)}\n"
+            f"Study Topics from Assigned YouTube Courses: {', '.join(course_titles)}\n\n"
+            "Generate EXACTLY 5 practical scenario-based multiple-choice questions (4 options each, 0-based `correctIndex`). "
+            "Test applied engineering understanding rather than trivia."
+        )
+        try:
+            res = _call_gemini_json(api_key, [{"text": prompt}], TEST_SCHEMA, temperature=0.3)
+            qs = res["data"].get("questions", [])[:5]
+            if len(qs) >= 3:
+                return {"questions": qs, "source": f"Gemini ({res['modelUsed']})"}
+        except Exception:
+            pass
+
+    # Deterministic fallback if API unavailable/offline
+    questions: list[dict[str, Any]] = []
+    idx = 1
+    for sk in focus_skills:
+        for item in _FALLBACK_BANK.get(sk.strip().lower(), []):
+            questions.append({"id": f"q{idx}", **item})
+            idx += 1
+    while len(questions) < 5:
+        sk = focus_skills[len(questions) % max(len(focus_skills), 1)] if focus_skills else "Backend Engineering"
+        questions.append(
+            {
+                "id": f"q{idx}",
+                "skill": sk,
+                "question": f"When building a production project using {sk} for {target_jd.get('company')}, which practice best proves reliability?",
+                "options": [
+                    f"Writing automated tests, error handling, and documented examples with {sk}",
+                    "Listing the keyword in a resume header without code",
+                    "Hardcoding secrets directly in frontend files",
+                    "Skipping version control entirely",
+                ],
+                "correctIndex": 0,
+                "explanation": f"Verified projects demonstrate working code, tests, and documentation in {sk}.",
+            }
+        )
+        idx += 1
+    return {"questions": questions[:5], "source": "PlaceFlow Local Question Bank"}
+
+
+def grade_skill_test(
+    questions: list[dict[str, Any]],
+    answers: list[int],
+    proctoring: dict[str, Any],
+) -> dict[str, Any]:
+    """Grade student skill verification test and record proctoring integrity."""
+    total = max(len(questions), 1)
+    correct = 0
+    review: list[dict[str, Any]] = []
+    verified_skills: list[str] = []
+
+    for i, q in enumerate(questions):
+        chosen = answers[i] if i < len(answers) else -1
+        is_right = chosen == q.get("correctIndex")
+        if is_right:
+            correct += 1
+            sk = str(q.get("skill") or "").strip()
+            if sk and sk not in verified_skills:
+                verified_skills.append(sk)
+        review.append(
+            {
+                "id": q.get("id"),
+                "skill": q.get("skill"),
+                "correct": is_right,
+                "chosen": chosen,
+                "correctIndex": q.get("correctIndex"),
+                "explanation": q.get("explanation"),
+            }
+        )
+
+    score_pct = round((correct / total) * 100)
+    tab_switches = int(proctoring.get("tabSwitches") or 0)
+    passed = score_pct >= 60 and tab_switches <= 2
+
+    return {
+        "scorePct": score_pct,
+        "correctCount": correct,
+        "totalQuestions": total,
+        "passed": passed,
+        "verifiedSkills": verified_skills if passed else [],
+        "proctoring": {
+            "webcamActive": bool(proctoring.get("webcamActive")),
+            "micActive": bool(proctoring.get("micActive")),
+            "micAudioDetected": bool(proctoring.get("micAudioDetected")),
+            "tabSwitches": tab_switches,
+            "durationSec": int(proctoring.get("durationSec") or 0),
+        },
+        "review": review,
+    }

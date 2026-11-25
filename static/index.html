@@ -73,8 +73,8 @@
         </div>
       </div>
 
-      <!-- Segmented Navigation Tabs -->
-      <nav class="flex items-center gap-1 p-1 rounded-xl bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800">
+      <!-- Segmented Navigation Tabs (Role-Scoped) -->
+      <nav id="main-nav" class="hidden items-center gap-1 p-1 rounded-xl bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800">
         <button onclick="switchTab('router')" id="tab-btn-router"
           class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10"/></svg>
@@ -89,16 +89,23 @@
         <button onclick="switchTab('student')" id="tab-btn-student"
           class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.1a7.5 7.5 0 0 1 15 0"/></svg>
-          <span>Student Portal</span>
+          <span>My Student Portal</span>
         </button>
       </nav>
 
-      <!-- Right Controls: Gemini Key + Light/Dark Toggle -->
+      <!-- Right Controls: Role Pill + Gemini Key + Sign Out + Theme Toggle -->
       <div class="flex items-center gap-2 shrink-0">
+        <span id="role-badge" class="hidden items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border border-stone-200 dark:border-zinc-800 bg-stone-100 dark:bg-zinc-900 text-stone-700 dark:text-zinc-300"></span>
+
         <button onclick="openKeyModal()" id="api-key-pill"
-          class="interactive-btn inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border cursor-pointer bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50">
+          class="hidden interactive-btn items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border cursor-pointer bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50">
           <span id="api-key-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
           <span id="api-key-label">Set Gemini Key</span>
+        </button>
+
+        <button onclick="logout()" id="logout-btn"
+          class="hidden interactive-btn px-2.5 py-1.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-rose-400 text-xs font-medium cursor-pointer">
+          Sign Out
         </button>
 
         <button onclick="toggleTheme()" id="theme-toggle-btn" title="Switch Light / Dark Mode"
@@ -113,8 +120,88 @@
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
+    <!-- ==================== ROLE SIGN-IN GATE ==================== -->
+    <section id="auth-gate" class="max-w-4xl mx-auto py-6 space-y-6">
+      <div class="text-center space-y-2">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
+          ROLE-BASED ACCESS CONTROL · PLACEFLOW AI
+        </span>
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Choose your Placement Cell Portal</h1>
+        <p class="text-xs sm:text-sm text-stone-600 dark:text-zinc-400 max-w-xl mx-auto">
+          Admins access batch verification, Auto-Router, cutoff waivers, and HR exports. Students access only their own verified status, upskilling roadmap, or rerouted drive.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Admin Sign-In Card -->
+        <div class="interactive-card rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 space-y-4 shadow-xs">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-[11px] font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400">Coordinator Only</div>
+              <h2 class="text-base font-semibold mt-0.5">Placement Admin Console</h2>
+            </div>
+            <span class="px-2 py-0.5 rounded-md text-[11px] font-mono bg-stone-100 dark:bg-zinc-800">Auto-Router</span>
+          </div>
+          <div class="space-y-2.5 text-xs">
+            <div>
+              <label class="block font-medium mb-1">Admin Email</label>
+              <input id="login-admin-email" type="email" value="admin@rit.edu"
+                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
+            </div>
+            <div>
+              <label class="block font-medium mb-1">Admin Passcode</label>
+              <input id="login-admin-pass" type="password" value="RIT-ADMIN-2026"
+                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
+            </div>
+          </div>
+          <div class="flex items-center justify-between gap-2 pt-1">
+            <button onclick="fillAdminDemo()" class="interactive-btn px-3 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 text-xs font-medium cursor-pointer">
+              Fill Demo
+            </button>
+            <button onclick="loginAs('admin')" class="interactive-btn flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer">
+              Sign In as Admin →
+            </button>
+          </div>
+        </div>
+
+        <!-- Student Sign-In Card -->
+        <div class="interactive-card rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 space-y-4 shadow-xs">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-[11px] font-mono uppercase tracking-wider text-teal-600 dark:text-teal-400">Student Only</div>
+              <h2 class="text-base font-semibold mt-0.5">Student Placement Portal</h2>
+            </div>
+            <span class="px-2 py-0.5 rounded-md text-[11px] font-mono bg-stone-100 dark:bg-zinc-800">Private View</span>
+          </div>
+          <div class="space-y-2.5 text-xs">
+            <div>
+              <label class="block font-medium mb-1">Student College Email</label>
+              <input id="login-student-email" type="email" value="kiran.gowda@rit.edu"
+                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
+            </div>
+            <div>
+              <label class="block font-medium mb-1">Student Passcode</label>
+              <input id="login-student-pass" type="password" value="RIT-STUDENT-2026"
+                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
+            </div>
+            <div class="flex flex-wrap gap-1 pt-0.5">
+              <span class="text-[11px] text-stone-400 mr-1 self-center">Quick select:</span>
+              <button onclick="pickDemoStudent('aarav.sharma@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Aarav</button>
+              <button onclick="pickDemoStudent('kiran.gowda@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Kiran</button>
+              <button onclick="pickDemoStudent('ananya.rao@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Ananya</button>
+              <button onclick="pickDemoStudent('rohan.verma@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Rohan</button>
+              <button onclick="pickDemoStudent('meera.nair@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Meera</button>
+            </div>
+          </div>
+          <button onclick="loginAs('student')" class="interactive-btn w-full py-2.5 px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-semibold cursor-pointer">
+            Sign In to Student Portal →
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- ==================== TAB 1: BATCH AUTO-ROUTER ==================== -->
-    <section id="tab-router" class="space-y-6">
+    <section id="tab-router" class="hidden space-y-6">
 
       <!-- Hero Command Banner + Interactive Keyword Explainer + 1-to-3 Lane Diagram -->
       <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 shadow-xs space-y-5">
@@ -433,24 +520,25 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 3: STUDENT PORTAL VIEW ==================== -->
+    <!-- ==================== TAB 3: STUDENT PORTAL VIEW (STUDENT-ONLY) ==================== -->
     <section id="tab-student" class="hidden space-y-6">
-      <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-5">
-        <div class="space-y-3 border-b border-stone-200 dark:border-zinc-800 pb-4">
+      <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 sm:p-6 space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-stone-200 dark:border-zinc-800 pb-4">
           <div>
-            <h2 class="text-sm font-semibold">Student Portal Experience</h2>
+            <div class="text-[11px] font-mono uppercase tracking-wider text-teal-600 dark:text-teal-400">Private Student View</div>
+            <h2 class="text-base font-semibold mt-0.5">My Placement Status &amp; Action Plan</h2>
             <p class="text-xs text-stone-500 dark:text-zinc-400">
-              Select a student pill to preview their personalized placement status, 7-day roadmap, or rerouted drive.
+              Only your own verified application status is visible here. Admin routing and other students' records are hidden.
             </p>
           </div>
-          <div id="student-pills" class="flex flex-wrap gap-2">
-            <span class="text-xs text-stone-400">No students evaluated yet.</span>
-          </div>
+          <button onclick="loadStudentPortal()" class="interactive-btn px-3.5 py-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 text-xs font-semibold cursor-pointer self-start sm:self-auto">
+            ↻ Refresh My Status
+          </button>
         </div>
 
         <div id="student-portal-body">
           <div class="text-xs text-stone-500 dark:text-zinc-400 py-8 text-center">
-            Process at least one resume in Auto-Router to preview the Student Portal.
+            Loading your placement status...
           </div>
         </div>
       </div>
@@ -554,24 +642,139 @@
     };
 
     const state = {
+      user: null,
+      token: sessionStorage.getItem("placeflow_token") || "",
       jds: [],
       activeJdId: "cloud",
       queuedFiles: [],
       results: [],
+      studentRecords: [],
+      studentActiveJd: null,
       filter: "ALL",
       drawerId: null,
-      portalId: null,
-      isRunning: false,
-      appliedAlt: {}
+      isRunning: false
     };
+
+    function apiFetch(url, options = {}) {
+      const headers = Object.assign({}, options.headers || {});
+      if (state.token) {
+        headers["X-Session-Token"] = state.token;
+      }
+      return fetch(url, Object.assign({}, options, { headers }));
+    }
 
     async function init() {
       applySavedTheme();
-      await Promise.all([checkHealth(), loadJDs()]);
       setupDropzone();
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") closeDrawer();
       });
+      await restoreSession();
+    }
+
+    async function restoreSession() {
+      const health = await checkHealth();
+      if (health && health.user) {
+        state.user = health.user;
+        await applyRoleUI();
+      } else {
+        state.token = "";
+        sessionStorage.removeItem("placeflow_token");
+        state.user = null;
+        await applyRoleUI();
+      }
+    }
+
+    function fillAdminDemo() {
+      document.getElementById("login-admin-email").value = "admin@rit.edu";
+      document.getElementById("login-admin-pass").value = "RIT-ADMIN-2026";
+      toast("Admin credentials filled");
+    }
+
+    function pickDemoStudent(email) {
+      document.getElementById("login-student-email").value = email;
+      document.getElementById("login-student-pass").value = "RIT-STUDENT-2026";
+      toast(`Selected ${email}`);
+    }
+
+    async function loginAs(role) {
+      const email = document.getElementById(role === "admin" ? "login-admin-email" : "login-student-email").value.trim();
+      const passcode = document.getElementById(role === "admin" ? "login-admin-pass" : "login-student-pass").value.trim();
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role, email, passcode })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        toast(data.error || "Sign in failed", "error");
+        return;
+      }
+      state.token = data.token;
+      state.user = data.user;
+      sessionStorage.setItem("placeflow_token", state.token);
+      toast(`Signed in as ${data.user.role === "admin" ? "Placement Admin" : data.user.email}`);
+      await applyRoleUI();
+    }
+
+    async function logout() {
+      await apiFetch("/api/logout", { method: "POST" }).catch(() => {});
+      state.token = "";
+      state.user = null;
+      sessionStorage.removeItem("placeflow_token");
+      closeDrawer();
+      await applyRoleUI();
+      toast("Signed out");
+    }
+
+    async function applyRoleUI() {
+      const isSignedIn = !!state.user;
+      const isAdmin = state.user?.role === "admin";
+      const isStudent = state.user?.role === "student";
+
+      document.getElementById("auth-gate").classList.toggle("hidden", isSignedIn);
+      const nav = document.getElementById("main-nav");
+      nav.classList.toggle("hidden", !isSignedIn);
+      nav.classList.toggle("flex", isSignedIn);
+
+      const roleBadge = document.getElementById("role-badge");
+      roleBadge.classList.toggle("hidden", !isSignedIn);
+      roleBadge.classList.toggle("inline-flex", isSignedIn);
+      if (isSignedIn) {
+        roleBadge.textContent = isAdmin ? "Admin · Placement Cell" : `Student · ${state.user.email}`;
+      }
+
+      const keyPill = document.getElementById("api-key-pill");
+      keyPill.classList.toggle("hidden", !isAdmin);
+      keyPill.classList.toggle("inline-flex", isAdmin);
+
+      document.getElementById("logout-btn").classList.toggle("hidden", !isSignedIn);
+
+      // Strict tab visibility per role
+      document.getElementById("tab-btn-router").classList.toggle("hidden", !isAdmin);
+      document.getElementById("tab-btn-actions").classList.toggle("hidden", !isAdmin);
+      document.getElementById("tab-btn-student").classList.toggle("hidden", !isStudent);
+
+      if (!isSignedIn) {
+        ["router", "actions", "student"].forEach(t => document.getElementById("tab-" + t).classList.add("hidden"));
+        return;
+      }
+
+      if (isAdmin) {
+        switchTab("router");
+        await Promise.all([checkHealth(), loadJDs(), loadAdminResults()]);
+      } else if (isStudent) {
+        switchTab("student");
+        await loadStudentPortal();
+      }
+    }
+
+    async function loadAdminResults() {
+      const res = await apiFetch("/api/admin/results");
+      if (!res.ok) return;
+      const data = await res.json();
+      state.results = data.results || [];
+      renderResults();
     }
 
     function applySavedTheme() {
@@ -605,19 +808,19 @@
 
     async function checkHealth() {
       try {
-        const res = await fetch("/api/health");
+        const res = await apiFetch("/api/health");
         const data = await res.json();
         const pill = document.getElementById("api-key-pill");
         const dot = document.getElementById("api-key-dot");
         const label = document.getElementById("api-key-label");
         if (data.hasApiKey) {
-          pill.className = "interactive-btn inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border cursor-pointer bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300";
+          pill.className = `interactive-btn items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border cursor-pointer bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 ${state.user?.role === "admin" ? "inline-flex" : "hidden"}`;
           dot.className = "w-2 h-2 rounded-full bg-emerald-500";
           label.textContent = `Gemini Ready (${data.maskedKey})`;
         }
-        return data.hasApiKey;
+        return data;
       } catch (e) {
-        return false;
+        return null;
       }
     }
 
@@ -700,8 +903,9 @@
       const btn = document.getElementById("load-demo-btn");
       btn.disabled = true;
       try {
-        const res = await fetch("/api/demo-resumes");
+        const res = await apiFetch("/api/demo-resumes");
         const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Forbidden");
         state.queuedFiles = (data.files || []).map((f, idx) => ({
           id: "demo_" + idx + "_" + Date.now(),
           fileName: f.fileName,
@@ -712,7 +916,7 @@
         addLog(`[queue] Loaded ${state.queuedFiles.length} real RIT sample PDFs.`);
         toast(`Loaded ${state.queuedFiles.length} RIT sample PDFs`);
       } catch (err) {
-        toast("Failed to load sample PDFs", "error");
+        toast(err.message || "Failed to load sample PDFs", "error");
       } finally {
         btn.disabled = false;
       }
@@ -761,8 +965,8 @@
     }
 
     async function runBatchPipeline() {
-      const hasKey = await checkHealth();
-      if (!hasKey) {
+      const health = await checkHealth();
+      if (!health?.hasApiKey) {
         openKeyModal();
         toast("Enter your Gemini API key first", "error");
         return;
@@ -776,6 +980,7 @@
       state.isRunning = true;
       state.results = [];
       renderResults();
+      await apiFetch("/api/admin/clear", { method: "POST" });
 
       const btn = document.getElementById("run-pipeline-btn");
       const btnLabel = document.getElementById("run-btn-label");
@@ -808,10 +1013,11 @@
 
     async function verifySingleFile(file, jd) {
       try {
-        const res = await fetch("/api/verify-resume", {
+        const res = await apiFetch("/api/verify-resume", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            id: file.id,
             fileName: file.fileName,
             pdfBase64: file.pdfBase64,
             jd,
@@ -824,14 +1030,14 @@
         }
         addLog(`[ok] ${data.extracted.student_name} -> ${data.routing.routeLabel} (${data.meta.modelUsed}, ${data.meta.durationMs}ms)`);
         return {
-          id: file.id,
+          id: data.id || file.id,
           fileName: file.fileName,
           pdfBase64: file.pdfBase64,
           status: "ok",
           extracted: data.extracted,
           routing: data.routing,
           meta: data.meta,
-          checkedDays: {}
+          checkedDays: data.checkedDays || {}
         };
       } catch (err) {
         addLog(`[err] ${file.fileName}: ${err.message}`);
@@ -977,7 +1183,6 @@
       }).join("");
 
       renderEmailQueue(okItems);
-      renderPortalPills(okItems);
     }
 
     function openDrawer(id) {
@@ -1005,17 +1210,25 @@
       openDrawer(next.id);
     }
 
-    function approveWaiver(itemId) {
-      const item = state.results.find(r => r.id === itemId);
-      if (!item || item.status !== "ok") return;
-      item.routing.route = "SHORTLISTED";
-      item.routing.routeLabel = "Shortlisted (Waiver)";
-      item.routing.waiverApproved = true;
-      item.routing.verdictReason = `Coordinator approved Portfolio Exception waiver (${item.routing.matchPct}% verified project fit) — promoted to HR Shortlist.`;
-      addLog(`[waiver] ${item.extracted.student_name} promoted from Portfolio Exception -> Shortlisted.`);
-      toast(`Cutoff waiver approved for ${item.extracted.student_name}!`);
+    async function approveWaiver(itemId) {
+      const res = await apiFetch("/api/admin/approve-waiver", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: itemId })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        toast(data.error || "Failed to approve waiver", "error");
+        return;
+      }
+      const idx = state.results.findIndex(r => r.id === itemId);
+      if (idx !== -1) {
+        state.results[idx] = data.record;
+      }
+      addLog(`[waiver] ${data.record.extracted.student_name} promoted from Portfolio Exception -> Shortlisted.`);
+      toast(`Cutoff waiver approved for ${data.record.extracted.student_name}!`);
       renderResults();
-      renderDrawerBody(item);
+      renderDrawerBody(data.record);
     }
 
     function toggleDayTask(itemId, dayIdx) {
@@ -1126,15 +1339,12 @@
               class="interactive-btn px-3 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 font-medium cursor-pointer hover:bg-stone-100 dark:hover:bg-zinc-800">
               { } Toggle Raw Gemini JSON
             </button>
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center">
               <button onclick="copyText(${JSON.stringify(rawJson)}, 'Copied Gemini JSON')"
                 class="interactive-btn px-3 py-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 font-medium cursor-pointer hover:bg-stone-100 dark:hover:bg-zinc-800">
                 Copy JSON
               </button>
-              <button onclick="closeDrawer(); openPortalFor('${item.id}')"
-                class="interactive-btn px-3 py-1.5 rounded-lg bg-blue-600 text-white font-medium cursor-pointer">
-                Student Portal View →
-              </button>
+              <span class="text-[11px] text-stone-400">Student view is isolated to student accounts</span>
             </div>
           </div>
           <pre id="raw-json-pre" class="hidden p-3 rounded-xl bg-zinc-900 text-zinc-100 text-[11px] font-mono overflow-x-auto max-h-64">${escapeHtml(rawJson)}</pre>
@@ -1176,45 +1386,72 @@
       }).join("");
     }
 
-    function renderPortalPills(okItems) {
-      const wrap = document.getElementById("student-pills");
-      if (!okItems.length) {
-        wrap.innerHTML = `<span class="text-xs text-stone-400">No students evaluated yet.</span>`;
+    async function loadStudentPortal() {
+      const el = document.getElementById("student-portal-body");
+      const res = await apiFetch("/api/student/me");
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        el.innerHTML = `<div class="text-xs text-rose-600 py-8 text-center">${escapeHtml(data.error || "Unable to load Student Portal.")}</div>`;
         return;
       }
-      if (!state.portalId || !okItems.some(i => i.id === state.portalId)) {
-        state.portalId = okItems[0].id;
-      }
-      wrap.innerHTML = okItems.map(item => {
-        const active = item.id === state.portalId;
-        return `
-          <button onclick="state.portalId='${item.id}'; renderPortalPills(state.results.filter(r=>r.status==='ok')); renderStudentPortalBody();"
-            class="interactive-btn px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer border ${
-              active
-                ? "bg-blue-600 text-white border-blue-600"
-                : "border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 hover:border-blue-400"
-            }">
-            ${escapeHtml(item.extracted.student_name)} (${escapeHtml(item.routing.normalizedBranch)})
-          </button>
-        `;
-      }).join("");
+      state.studentRecords = data.records || [];
+      state.studentActiveJd = data.activeJd || null;
       renderStudentPortalBody();
     }
 
-    function openPortalFor(id) {
-      state.portalId = id;
-      switchTab("student");
-      renderPortalPills(state.results.filter(r => r.status === "ok"));
+    async function toggleDayTask(itemId, dayIdx) {
+      if (state.user?.role === "student") {
+        const res = await apiFetch("/api/student/toggle-day", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: itemId, dayIdx })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          const rec = state.studentRecords.find(r => r.id === itemId);
+          if (rec) rec.checkedDays = data.checkedDays;
+          renderStudentPortalBody();
+        }
+        return;
+      }
+      const item = state.results.find(r => r.id === itemId);
+      if (!item) return;
+      item.checkedDays[dayIdx] = !item.checkedDays[dayIdx];
+      renderDrawerBody(item);
+    }
+
+    async function confirmReroute(itemId, companyName) {
+      const res = await apiFetch("/api/student/confirm-reroute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: itemId })
+      });
+      if (res.ok) {
+        const rec = state.studentRecords.find(r => r.id === itemId);
+        if (rec) rec.appliedAlt = true;
+        renderStudentPortalBody();
+        toast(`Confirmed transfer to ${companyName}!`);
+      }
     }
 
     function renderStudentPortalBody() {
       const el = document.getElementById("student-portal-body");
-      const item = state.results.find(r => r.id === state.portalId && r.status === "ok");
-      if (!item) return;
+      if (!state.studentRecords.length) {
+        el.innerHTML = `
+          <div class="rounded-2xl border border-dashed border-stone-300 dark:border-zinc-700 p-8 text-center space-y-2">
+            <div class="text-sm font-semibold">No verified placement audit yet for ${escapeHtml(state.user?.email || "")}</div>
+            <p class="text-xs text-stone-500 dark:text-zinc-400 max-w-md mx-auto">
+              Once your Placement Cell Admin runs batch verification on your resume PDF, your personal route, 7-day plan, or alternative drive will appear here automatically.
+            </p>
+          </div>
+        `;
+        return;
+      }
 
+      const item = state.studentRecords[state.studentRecords.length - 1];
       const ex = item.extracted;
       const rt = item.routing;
-      const jd = state.jds.find(j => j.id === state.activeJdId);
+      const jd = state.studentActiveJd || { company: "Target Company" };
 
       let card = "";
       if (rt.route === "SHORTLISTED") {
@@ -1238,7 +1475,7 @@
         `;
       } else if (rt.route === "UPSKILL_TRACK") {
         const steps = ex.upskilling_plan_7_days || [];
-        const doneCount = steps.filter((_, idx) => item.checkedDays[idx]).length;
+        const doneCount = steps.filter((_, idx) => item.checkedDays?.[String(idx)]).length;
         const pct = steps.length ? Math.round((doneCount / steps.length) * 100) : 0;
         card = `
           <div class="p-5 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20 space-y-4">
@@ -1251,7 +1488,7 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               ${steps.map((s, idx) => {
-                const checked = !!item.checkedDays[idx];
+                const checked = !!item.checkedDays?.[String(idx)];
                 return `
                   <label class="interactive-card p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 space-y-1.5 cursor-pointer block">
                     <div class="flex items-center justify-between">
@@ -1268,7 +1505,7 @@
         `;
       } else if (rt.altMatches?.length) {
         const alt = rt.altMatches[0];
-        const applied = !!state.appliedAlt[item.id];
+        const applied = !!item.appliedAlt;
         card = `
           <div class="p-5 rounded-2xl border border-sky-200 dark:border-sky-800 bg-sky-50/40 dark:bg-sky-950/20 space-y-3">
             <div class="text-sm font-semibold text-sky-800 dark:text-sky-300">↪ Auto-Rerouted to Better-Fit Placement Drive</div>
@@ -1278,11 +1515,9 @@
                 <div class="text-xs font-semibold">${escapeHtml(alt.company)} — ${escapeHtml(alt.role)}</div>
                 <div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">${alt.fitPct}% verified skill match · ${escapeHtml(alt.ctc || "Active Drive")}</div>
               </div>
-              <button onclick="state.appliedAlt['${item.id}']=true; renderStudentPortalBody(); toast('Confirmed transfer to ${escapeHtml(alt.company)}!')"
+              <button onclick="confirmReroute('${item.id}', ${JSON.stringify(alt.company)})"
                 class="interactive-btn px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer ${
-                  applied
-                    ? "bg-emerald-600 text-white"
-                    : "bg-blue-600 text-white"
+                  applied ? "bg-emerald-600 text-white" : "bg-blue-600 text-white"
                 }">
                 ${applied ? "✓ Drive Confirmed" : "Confirm Auto-Reroute"}
               </button>
@@ -1302,7 +1537,7 @@
         <div class="space-y-4">
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div>
-              <div class="text-xs text-stone-500 dark:text-zinc-400">Student Profile</div>
+              <div class="text-xs text-stone-500 dark:text-zinc-400">Verified Academic &amp; Skill Profile</div>
               <div class="text-base font-semibold">${escapeHtml(ex.student_name)} · ${escapeHtml(rt.normalizedBranch)} (${ex.cgpa} CGPA)</div>
             </div>
             ${routePill(rt)}
@@ -1396,7 +1631,7 @@
     async function saveApiKey() {
       const key = document.getElementById("api-key-input").value.trim();
       if (!key) return;
-      const res = await fetch("/api/config", {
+      const res = await apiFetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ apiKey: key })

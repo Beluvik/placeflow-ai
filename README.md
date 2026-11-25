@@ -23,8 +23,10 @@ PlaceFlow AI is an end-to-end automated placement screening pipeline (not a stan
    python3 server.py
    ```
 2. Open `http://127.0.0.1:8765` in Chrome.
-3. Click **Set Gemini Key** in the top-right bar and paste your Gemini API key (saved locally to `.env`, ignored by Git).
-4. Click **Load 5 Sample RIT PDFs** → **Verify & Route Batch**.
+3. **Role-Based Access Control:**
+   - **Placement Admin (`admin@rit.edu` / `RIT-ADMIN-2026`):** Sees **only** the Auto-Router, Waiver Controls, Gemini API Settings, and HR Export & Emails.
+   - **Student Portal (`<student>@rit.edu`, e.g., `kiran.gowda@rit.edu` / `RIT-STUDENT-2026`):** Sees **only** their own verified placement status, 7-day upskilling checklist, or rerouted drive.
+4. As Admin, click **Set Gemini Key** in the top-right bar (saved locally to `.env`, ignored by Git), then click **Load 5 Sample RIT PDFs** → **Verify & Route Batch**.
 
 ### Windows / Linux
 1. Run `start_windows.bat` (Windows) or in Command Prompt / Terminal:

@@ -113,13 +113,18 @@ def test_deterministic_router() -> None:
     assert res5["altMatches"] == [], res5
 
 
-def _invoke_handler(method: str, path: str, body: dict | None = None) -> tuple[int, bytes]:
+def _invoke_handler(
+    method: str, path: str, body: dict | None = None, token: str = ""
+) -> tuple[int, bytes]:
     raw_body = json.dumps(body).encode("utf-8") if body is not None else b""
+    headers = {"Content-Length": str(len(raw_body))}
+    if token:
+        headers["X-Session-Token"] = token
 
     class DummyHandler(server.PlaceFlowHandler):
         def __init__(self) -> None:
             self.path = path
-            self.headers = {"Content-Length": str(len(raw_body))}
+            self.headers = headers
             self.rfile = io.BytesIO(raw_body)
             self.wfile = io.BytesIO()
             self.status_code = 0
@@ -142,6 +147,9 @@ def _invoke_handler(method: str, path: str, body: dict | None = None) -> tuple[i
 
 
 def test_http_handlers() -> None:
+    server.SESSIONS.clear()
+    server.RESULTS_STORE.clear()
+
     status, html_bytes = _invoke_handler("GET", "/")
     html = html_bytes.decode("utf-8")
     assert status == 200
@@ -156,20 +164,90 @@ def test_http_handlers() -> None:
     jds = json.loads(jds_bytes.decode("utf-8"))
     assert status == 200 and len(jds["jds"]) == 3
 
-    status, demos_bytes = _invoke_handler("GET", "/api/demo-resumes")
+    # Unauthenticated requests to protected routes -> 401
+    assert _invoke_handler("GET", "/api/demo-resumes")[0] == 401
+    assert _invoke_handler("GET", "/api/student/me")[0] == 401
+
+    # Sign in as Admin
+    status, admin_login_b = _invoke_handler(
+        "POST",
+        "/api/login",
+        {"role": "admin", "email": server.ADMIN_EMAIL, "passcode": server.ADMIN_PASSCODE},
+    )
+    assert status == 200
+    admin_token = json.loads(admin_login_b.decode("utf-8"))["token"]
+
+    # Sign in as Student (Kiran)
+    status, stu_login_b = _invoke_handler(
+        "POST",
+        "/api/login",
+        {"role": "student", "email": "kiran.gowda@rit.edu", "passcode": server.STUDENT_PASSCODE},
+    )
+    assert status == 200
+    student_token = json.loads(stu_login_b.decode("utf-8"))["token"]
+
+    # Role isolation: Student blocked from Admin routes (403); Admin blocked from Student routes (403)
+    assert _invoke_handler("GET", "/api/demo-resumes", token=student_token)[0] == 403
+    assert _invoke_handler("GET", "/api/admin/results", token=student_token)[0] == 403
+    assert _invoke_handler("POST", "/api/verify-resume", {"fileName": "x.pdf"}, token=student_token)[0] == 403
+    assert _invoke_handler("GET", "/api/student/me", token=admin_token)[0] == 403
+
+    # Admin can fetch all 5 demo PDFs
+    status, demos_bytes = _invoke_handler("GET", "/api/demo-resumes", token=admin_token)
     demos = json.loads(demos_bytes.decode("utf-8"))
     assert status == 200 and len(demos["files"]) == 5
     assert all(f["fileName"].endswith(".pdf") and len(f["pdfBase64"]) > 1000 for f in demos["files"])
 
+    # Missing Gemini key for Admin verify -> 400 JSON
     orig_load = server.load_api_key
     server.load_api_key = lambda: ""
     try:
-        status, err_bytes = _invoke_handler("POST", "/api/verify-resume", {"fileName": "test.pdf"})
+        status, err_bytes = _invoke_handler(
+            "POST", "/api/verify-resume", {"fileName": "test.pdf"}, token=admin_token
+        )
         assert status == 400
         err_json = json.loads(err_bytes.decode("utf-8"))
         assert "Gemini API key" in err_json["error"]
     finally:
         server.load_api_key = orig_load
+
+    # Seed evaluated records and verify strict per-student isolation + waiver promotion
+    server.RESULTS_STORE.extend(
+        [
+            {
+                "id": "rec_kiran",
+                "fileName": "05_Kiran_Gowda_Portfolio_Exception.pdf",
+                "status": "ok",
+                "extracted": {"student_name": "Kiran Gowda", "email": "kiran.gowda@rit.edu"},
+                "routing": {"route": "PORTFOLIO_EXCEPTION", "routeLabel": "Portfolio Exception", "matchPct": 100},
+                "checkedDays": {},
+            },
+            {
+                "id": "rec_aarav",
+                "fileName": "01_Aarav_Sharma_Strong_Match.pdf",
+                "status": "ok",
+                "extracted": {"student_name": "Aarav Sharma", "email": "aarav.sharma@rit.edu"},
+                "routing": {"route": "SHORTLISTED", "routeLabel": "Shortlisted", "matchPct": 100},
+                "checkedDays": {},
+            },
+        ]
+    )
+
+    status, stu_me_b = _invoke_handler("GET", "/api/student/me", token=student_token)
+    stu_me = json.loads(stu_me_b.decode("utf-8"))
+    assert status == 200 and len(stu_me["records"]) == 1
+    assert stu_me["records"][0]["id"] == "rec_kiran"
+
+    # Kiran cannot modify Aarav's record
+    assert (
+        _invoke_handler("POST", "/api/student/toggle-day", {"id": "rec_aarav", "dayIdx": 0}, token=student_token)[0]
+        == 403
+    )
+
+    # Admin approves Kiran's waiver -> Kiran sees SHORTLISTED in Student Portal
+    assert _invoke_handler("POST", "/api/admin/approve-waiver", {"id": "rec_kiran"}, token=admin_token)[0] == 200
+    stu_after = json.loads(_invoke_handler("GET", "/api/student/me", token=student_token)[1].decode("utf-8"))
+    assert stu_after["records"][0]["routing"]["route"] == "SHORTLISTED"
 
 
 if __name__ == "__main__":

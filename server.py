@@ -740,7 +740,7 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                                 }
                                 eligible = all(gates.values())
                                 evaluated_alternatives.append({
-                                    "jdId": alternative.get("id),
+                                    "jdId": alternative.get("id"),
                                     "company": alternative.get("company"),
                                     "role": alternative.get("role"),
                                     "fitPct": candidate_route.get("matchPct", 0),

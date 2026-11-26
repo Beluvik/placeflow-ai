@@ -668,6 +668,11 @@
         <div class="flex items-center justify-between gap-2"><h3 class="font-semibold text-sm">Targeted stakeholder alerts</h3><span id="disruption-alert-count" class="text-[11px] font-mono text-stone-500">0 alerts</span></div>
         <div id="disruption-alerts" class="space-y-2 text-xs"><p class="text-stone-500">No disruption alerts yet.</p></div>
       </div>
+      <div class="rounded-2xl border border-violet-200 dark:border-violet-900 bg-white dark:bg-zinc-900 p-5 space-y-3">
+        <div class="flex items-center justify-between gap-2 flex-wrap"><div><h3 class="text-sm font-semibold">Decision appeals &amp; override review</h3><p class="text-xs text-stone-500">Review student flags, request information, accept/reject appeals or record a reasoned human override.</p></div><button onclick="loadAppealReview()" class="interactive-btn rounded-lg border border-stone-300 dark:border-zinc-700 px-3 py-2 text-xs">Refresh</button></div>
+        <div id="college-appeals-list" class="space-y-3 text-xs"><p class="text-stone-500">No appeals loaded.</p></div>
+        <div class="border-t border-stone-200 dark:border-zinc-700 pt-3"><h4 class="font-semibold text-xs mb-1">Audit trail</h4><div id="college-audit-list" class="space-y-1 text-[11px] text-stone-500"></div></div>
+      </div>
     </section>
 
     <section id="tab-hr" class="hidden space-y-6">
@@ -786,6 +791,12 @@
 
         <div id="student-erp-banner"></div>
         <div id="student-portal-body"></div>
+        <div class="mt-4 rounded-xl border border-blue-200 dark:border-blue-900 p-4 space-y-3">
+          <div><h3 class="text-sm font-semibold">Why did PlaceFlow decide this?</h3><p class="text-xs text-stone-500">Inspect the rules and evidence behind your latest automated placement outcome.</p></div>
+          <div id="student-decision-explanation" class="text-xs space-y-2"><p class="text-stone-500">Your decision explanation will appear after screening.</p></div>
+          <div class="border-t border-stone-200 dark:border-zinc-700 pt-3 space-y-2"><label class="text-xs font-semibold" for="student-appeal-reason">Appeal / flag this decision</label><textarea id="student-appeal-reason" maxlength="1000" rows="3" placeholder="Briefly explain what you believe is incorrect and what evidence should be reviewed..." class="w-full rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 p-3 text-xs"></textarea><button onclick="submitStudentAppeal()" class="interactive-btn rounded-lg bg-blue-600 text-white px-4 py-2 text-xs font-semibold">Submit appeal for review</button></div>
+          <div id="student-appeals-list" class="space-y-2 text-xs"></div>
+        </div>
       </div>
 
       <!-- Opportunities + Prepare for a Specific JD -->
@@ -1915,6 +1926,53 @@
     }
 
     // ==================== STUDENT PORTAL + UPLOAD + OPPORTUNITIES + PROCTORED TEST ====================
+    function renderStudentDecisionExplanation(item) {
+      const el = document.getElementById("student-decision-explanation");
+      if (!el) return;
+      const d = item?.decisionExplanation || {};
+      const rules = d.rules || [];
+      el.innerHTML = '<div class="font-semibold">Outcome: ' + escapeHtml(d.outcome || item?.routing?.routeLabel || item?.routing?.route || "Pending") + '</div><p>' + escapeHtml(d.reason || item?.routing?.verdictReason || "No explanation available yet.") + '</p>' + (rules.length ? '<div class="grid grid-cols-1 md:grid-cols-3 gap-2">' + rules.map(r => '<div class="rounded-lg p-2 border border-stone-200 dark:border-zinc-700"><div class="font-semibold">' + escapeHtml(r.name) + ' · ' + (r.passed ? 'PASS' : 'FAIL') + '</div><div>Actual: ' + escapeHtml(r.actual) + '</div><div>Rule: ' + escapeHtml(r.constraint) + '</div></div>').join("") + '</div>' : '') + '<div>Skill fit: ' + escapeHtml(d.skillFitPct ?? item?.routing?.matchPct ?? "—") + '% · Matched: ' + escapeHtml((d.matchedSkills || item?.routing?.matchedMustHave || []).join(", ") || "—") + ' · Missing: ' + escapeHtml((d.missingSkills || item?.routing?.missingMustHave || []).join(", ") || "None") + '</div>';
+    }
+
+    async function loadStudentAppeals() {
+      const res = await apiFetch("/api/appeals"); if (!res.ok) return;
+      const data = await res.json(); const el = document.getElementById("student-appeals-list");
+      if (el) el.innerHTML = (data.appeals || []).map(a => '<div class="rounded-lg border border-stone-200 dark:border-zinc-700 p-2"><strong>' + escapeHtml(a.status) + '</strong> · ' + escapeHtml(a.createdAt) + '<div>' + escapeHtml(a.reason) + '</div><div class="text-stone-500">' + escapeHtml(a.reviewNote || "") + '</div></div>').join("") || '<p class="text-stone-500">No appeals submitted yet.</p>';
+    }
+
+    async function submitStudentAppeal() {
+      const records = state.studentData?.records || []; const item = records[records.length - 1];
+      const reason = document.getElementById("student-appeal-reason").value.trim();
+      if (!item) return toast("There is no placement decision to appeal yet.", "error");
+      if (!reason) return toast("Enter a brief reason for the appeal.", "error");
+      const res = await apiFetch("/api/student/appeal", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({recordId:item.id, reason})});
+      const data = await res.json(); if (!res.ok) return toast(data.error || "Appeal failed.", "error");
+      document.getElementById("student-appeal-reason").value = ""; await loadStudentAppeals(); toast("Appeal submitted to the placement cell.");
+    }
+
+    async function loadAppealReview() {
+      const [aRes, lRes] = await Promise.all([apiFetch("/api/appeals"), apiFetch("/api/audit")]);
+      const aData = await aRes.json(), lData = await lRes.json();
+      const list = document.getElementById("college-appeals-list"), audit = document.getElementById("college-audit-list");
+      if (list) list.innerHTML = (aData.appeals || []).slice().reverse().map(a => '<div class="rounded-xl border border-stone-200 dark:border-zinc-700 p-3 space-y-2"><div class="flex justify-between gap-2"><strong>' + escapeHtml(a.studentName) + ' · ' + escapeHtml(a.status) + '</strong><span>' + escapeHtml(a.createdAt) + '</span></div><p>' + escapeHtml(a.reason) + '</p><p class="text-stone-500">Original outcome: ' + escapeHtml(a.explanation?.outcome || "—") + '</p><div class="flex flex-wrap gap-2"><button class="border rounded px-2 py-1" onclick="reviewAppeal(\'' + a.id + '\',\'UNDER_REVIEW\')">Start review</button><button class="border rounded px-2 py-1" onclick="reviewAppeal(\'' + a.id + '\',\'ACCEPTED\')">Accept</button><button class="border rounded px-2 py-1" onclick="reviewAppeal(\'' + a.id + '\',\'REJECTED\')">Reject</button><button class="border rounded px-2 py-1" onclick="reviewAppeal(\'' + a.id + '\',\'NEED_INFO\')">Need info</button><button class="border rounded px-2 py-1" onclick="overrideAppeal(\'' + a.id + '\')">Override route</button></div><p class="text-stone-500">' + escapeHtml(a.reviewNote || "") + '</p></div>').join("") || '<p class="text-stone-500">No appeals have been submitted.</p>';
+      if (audit) audit.innerHTML = (lData.entries || []).slice().reverse().map(e => '<div>' + escapeHtml(e.timestamp) + ' · ' + escapeHtml(e.actor) + ' · ' + escapeHtml(e.action) + ' · ' + escapeHtml(e.fromStatus) + ' → ' + escapeHtml(e.toStatus) + '</div>').join("") || "No audit events yet.";
+    }
+
+    async function reviewAppeal(appealId, status) {
+      const note = prompt("Add a short review note (required for traceability):") || ""; if (!note.trim()) return;
+      const res = await apiFetch("/api/college/appeal-review", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({appealId,status,note})});
+      const data = await res.json(); if (!res.ok) return toast(data.error || "Review failed.", "error");
+      await loadAppealReview(); toast("Appeal status updated and audited.");
+    }
+
+    async function overrideAppeal(appealId) {
+      const route = (prompt("Override route: SHORTLISTED, PORTFOLIO_EXCEPTION, UPSKILL_TRACK, or REROUTED") || "").trim().toUpperCase();
+      const note = prompt("Mandatory reason for this human override:") || ""; if (!route || !note.trim()) return;
+      const res = await apiFetch("/api/college/appeal-review", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({appealId,status:"OVERRIDDEN",overrideRoute:route,note})});
+      const data = await res.json(); if (!res.ok) return toast(data.error || "Override failed.", "error");
+      await loadAppealReview(); toast("Human override recorded with original decision preserved.");
+    }
+
     async function loadStudentPortal() {
       const [meRes, jdRes] = await Promise.all([apiFetch("/api/student/me"), fetch("/api/jds")]);
       const data = await meRes.json();
@@ -1930,6 +1988,7 @@
       renderStudentErpBanner(data.erpRecord);
       renderStudentPortalBody();
       renderStudentOpportunities(data.opportunities || []);
+      await loadStudentAppeals();
     }
 
     function handleStudentFilePick(fileList) {
@@ -2047,6 +2106,7 @@
           ${card}
         </div>
       `;
+      renderStudentDecisionExplanation(item);
     }
 
     function renderStudentOpportunities(opps) {
@@ -2327,6 +2387,7 @@
       });
       if (tab === "analytics") loadCollegeAnalytics();
       if (tab === "disruptions") loadDisruptionPanel();
+      if (tab === "disruptions") loadAppealReview();
     }
 
     function openKeyModal() { document.getElementById("key-modal").classList.remove("hidden"); document.getElementById("key-modal").classList.add("flex"); }

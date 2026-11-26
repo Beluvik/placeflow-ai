@@ -509,9 +509,43 @@ def test_resource_outage_auto_matches_alternative_drive():
     assert result["diffs"][0]["alternative"]["company"] == "DataPulse Analytics"
     assert len(server.NOTIFICATIONS_STORE) == 1
 
+
+def test_decision_appeal_audit_trail() -> None:
+    server.RESULTS_STORE.clear()
+    server.APPEALS_STORE.clear()
+    server.AUDIT_LOG.clear()
+    server.JDS_STORE[:] = copy.deepcopy(DEFAULT_JDS)
+    server.ACTIVE_JD_SNAPSHOT = server.JDS_STORE[0]
+    server.SESSIONS["appeal-student-token"] = {"role": "student", "email": "appeal.student@example.edu", "name": "Appeal Student"}
+    server.SESSIONS["appeal-college-token"] = {"role": "college", "email": server.COLLEGE_EMAIL, "name": "Placement Cell"}
+    extracted = {"student_name": "Appeal Student", "email": "appeal.student@example.edu", "branch": "CSE", "cgpa": 8.1, "active_backlogs": 0, "verified_skills": [{"skill": x, "evidence_source": "Project"} for x in ["Python", "SQL", "REST APIs", "Docker", "Git"]], "unverified_claims": []}
+    routing = evaluate_deterministic_rules(extracted, server.JDS_STORE[0], server.JDS_STORE)
+    record = {"id": "appeal_record", "jdId": "cloud", "status": "ok", "extracted": extracted, "routing": routing, "ownerEmail": extracted["email"]}
+    record["decisionExplanation"] = server._decision_explanation(record)
+    server.RESULTS_STORE.append(record)
+
+    status, payload = _invoke("POST", "/api/student/appeal", {"recordId": "appeal_record", "reason": "My resume evidence for the required skill was overlooked."}, token="appeal-student-token")
+    submitted = json.loads(payload.decode("utf-8"))
+    assert status == 201 and submitted["appeal"]["status"] == "SUBMITTED"
+    appeal_id = submitted["appeal"]["id"]
+    assert submitted["appeal"]["explanation"]["rules"]
+
+    assert _invoke("GET", "/api/appeals", token="appeal-college-token")[0] == 200
+    status, payload = _invoke("POST", "/api/college/appeal-review", {"appealId": appeal_id, "status": "UNDER_REVIEW", "note": "Evidence review started."}, token="appeal-college-token")
+    assert status == 200 and json.loads(payload.decode("utf-8"))["appeal"]["status"] == "UNDER_REVIEW"
+    status, payload = _invoke("POST", "/api/college/appeal-review", {"appealId": appeal_id, "status": "OVERRIDDEN", "overrideRoute": "SHORTLISTED", "note": "Verified project evidence; manual correction approved."}, token="appeal-college-token")
+    assert status == 200
+    assert record["routing"]["route"] == "SHORTLISTED"
+    assert record["humanOverride"]["automatedDecisionPreserved"] is True
+    assert [entry["toStatus"] for entry in server.APPEALS_STORE[0]["history"]] == ["SUBMITTED", "UNDER_REVIEW", "OVERRIDDEN"]
+    assert len(server.AUDIT_LOG) >= 4
+    assert all(entry.get("timestamp") for entry in server.AUDIT_LOG)
+    assert _invoke("POST", "/api/student/appeal", {"recordId": "not-owned", "reason": "Try to appeal another student's decision."}, token="appeal-student-token")[0] == 404
+
 if __name__ == "__main__":
     test_erp_and_deterministic_router()
     test_3_portal_rbac_and_proctored_test()
     test_selective_campus_disruption_reroute()
     test_resource_outage_auto_matches_alternative_drive()
+    test_decision_appeal_audit_trail()
     print("ALL TESTS PASSED")

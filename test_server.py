@@ -4,6 +4,7 @@ import copy
 import io
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -511,6 +512,9 @@ def test_resource_outage_auto_matches_alternative_drive():
 
 
 def test_decision_appeal_audit_trail() -> None:
+    temp_dir = tempfile.TemporaryDirectory()
+    original_audit_path = server.AUDIT_PATH
+    server.AUDIT_PATH = Path(temp_dir.name) / "appeal_audit.json"
     server.RESULTS_STORE.clear()
     server.APPEALS_STORE.clear()
     server.AUDIT_LOG.clear()
@@ -529,6 +533,14 @@ def test_decision_appeal_audit_trail() -> None:
     assert status == 201 and submitted["appeal"]["status"] == "SUBMITTED"
     appeal_id = submitted["appeal"]["id"]
     assert submitted["appeal"]["explanation"]["rules"]
+    # The submission event and appeal history must both survive a reload.
+    persisted = json.loads(server.AUDIT_PATH.read_text(encoding="utf-8"))
+    assert persisted["appeals"][0]["history"][0]["toStatus"] == "SUBMITTED"
+    server.APPEALS_STORE.clear()
+    server.AUDIT_LOG.clear()
+    server._load_audit_state()
+    assert server.APPEALS_STORE[0]["id"] == appeal_id
+    assert server.AUDIT_LOG[0]["action"] == "APPEAL_SUBMITTED"
 
     assert _invoke("GET", "/api/appeals", token="appeal-college-token")[0] == 200
     status, payload = _invoke("POST", "/api/college/appeal-review", {"appealId": appeal_id, "status": "UNDER_REVIEW", "note": "Evidence review started."}, token="appeal-college-token")
@@ -537,7 +549,27 @@ def test_decision_appeal_audit_trail() -> None:
     assert status == 200
     assert record["routing"]["route"] == "SHORTLISTED"
     assert record["humanOverride"]["automatedDecisionPreserved"] is True
+    assert record["decisionExplanation"]["outcome"].endswith("(Human Override)")
+    assert server.APPEALS_STORE[0]["originalDecision"]["route"] != "SHORTLISTED" or server.APPEALS_STORE[0]["originalDecision"].get("route") == routing["route"]
     assert [entry["toStatus"] for entry in server.APPEALS_STORE[0]["history"]] == ["SUBMITTED", "UNDER_REVIEW", "OVERRIDDEN"]
+    # Closed appeals cannot be silently re-opened or overwritten.
+    status, _ = _invoke("POST", "/api/college/appeal-review", {"appealId": appeal_id, "status": "REJECTED", "note": "Attempted post-close change."}, token="appeal-college-token")
+    assert status == 409
+    # Every transition requires a meaningful reviewer note.
+    status, _ = _invoke("POST", "/api/college/appeal-review", {"appealId": "another", "status": "UNDER_REVIEW", "note": ""}, token="appeal-college-token")
+    assert status == 400
+    # Student audit view must not reveal another student's record trail.
+    server.RESULTS_STORE.append({"id": "private_record", "status": "ok", "ownerEmail": "other@example.edu", "extracted": {"email": "other@example.edu"}})
+    server._audit_transition("record", "private_record", "PRIVATE_EVENT", "other@example.edu", "", "PRIVATE", "private details")
+    status, payload = _invoke("GET", "/api/audit", token="appeal-student-token")
+    own_events = json.loads(payload.decode("utf-8"))["entries"]
+    assert status == 200 and all(event.get("entityId") != "private_record" for event in own_events)
+    # A different student cannot retrieve or appeal the first student's appeal.
+    server.SESSIONS["other-student-token"] = {"role": "student", "email": "other@example.edu", "name": "Other"}
+    status, payload = _invoke("GET", "/api/appeals", token="other-student-token")
+    assert status == 200 and json.loads(payload.decode("utf-8"))["appeals"] == []
+    server.AUDIT_PATH = original_audit_path
+    temp_dir.cleanup()
     assert len(server.AUDIT_LOG) >= 4
     assert all(entry.get("timestamp") for entry in server.AUDIT_LOG)
     assert _invoke("POST", "/api/student/appeal", {"recordId": "not-owned", "reason": "Try to appeal another student's decision."}, token="appeal-student-token")[0] == 404

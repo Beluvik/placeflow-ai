@@ -51,21 +51,35 @@ APPEALS_STORE: list[dict[str, Any]] = []
 AUDIT_LOG: list[dict[str, Any]] = []
 
 
+def _load_audit_state() -> None:
+    """Restore persisted appeals and audit events; malformed files fail safely."""
+    if not AUDIT_PATH.exists():
+        return
+    saved = json.loads(AUDIT_PATH.read_text(encoding="utf-8"))
+    if not isinstance(saved, dict):
+        raise ValueError("Appeal audit store must contain a JSON object.")
+    appeals = saved.get("appeals", [])
+    events = saved.get("auditLog", [])
+    if not isinstance(appeals, list) or not isinstance(events, list):
+        raise ValueError("Appeal audit store has an invalid schema.")
+    APPEALS_STORE.clear()
+    AUDIT_LOG.clear()
+    APPEALS_STORE.extend(item for item in appeals if isinstance(item, dict))
+    AUDIT_LOG.extend(item for item in events if isinstance(item, dict))
+
+
 def _persist_audit_state() -> None:
-    """Durably persist appeal state and append-only audit entries to local JSON."""
+    """Atomically persist appeal state and append-only audit entries to local JSON."""
     payload = {"appeals": APPEALS_STORE, "auditLog": AUDIT_LOG}
     temp_path = AUDIT_PATH.with_suffix(".tmp")
     temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     temp_path.replace(AUDIT_PATH)
 
 
-if AUDIT_PATH.exists():
-    try:
-        _saved_audit_state = json.loads(AUDIT_PATH.read_text(encoding="utf-8"))
-        APPEALS_STORE.extend(_saved_audit_state.get("appeals", []))
-        AUDIT_LOG.extend(_saved_audit_state.get("auditLog", []))
-    except (OSError, ValueError, TypeError):
-        pass
+try:
+    _load_audit_state()
+except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+    print(f"WARNING: Could not restore appeal audit store: {exc}")
 
 
 def load_api_key() -> str:
@@ -768,6 +782,7 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     APPEALS_STORE.append(appeal)
                     _audit_transition("appeal", appeal_id, "APPEAL_SUBMITTED", session["email"], "", "SUBMITTED", reason)
                     appeal["history"].append(copy.deepcopy(AUDIT_LOG[-1]))
+                    _persist_audit_state()
                     result = copy.deepcopy(appeal)
                 self._send_json(201, {"ok": True, "appeal": result})
             except Exception as exc:
@@ -787,12 +802,24 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                 if status not in allowed:
                     self._send_json(400, {"error": "Invalid appeal status."})
                     return
+                if not note:
+                    self._send_json(400, {"error": "A review note is required for every appeal status change."})
+                    return
+                if len(note) > 1000:
+                    self._send_json(400, {"error": "Review note must be 1,000 characters or fewer."})
+                    return
                 with _LOCK:
                     appeal = next((a for a in APPEALS_STORE if a.get("id") == appeal_id), None)
                     if not appeal:
                         self._send_json(404, {"error": "Appeal not found."})
                         return
                     previous = appeal["status"]
+                    if previous in {"ACCEPTED", "REJECTED", "OVERRIDDEN"}:
+                        self._send_json(409, {"error": "This appeal is already closed and cannot be changed."})
+                        return
+                    if status == previous:
+                        self._send_json(409, {"error": "Appeal is already in that status."})
+                        return
                     target = None
                     override_route = ""
                     if status == "OVERRIDDEN":
@@ -805,15 +832,17 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     appeal["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
                     appeal["reviewNote"] = note[:1000]
                     if status == "OVERRIDDEN":
-                        appeal["originalDecision"] = copy.deepcopy(target.get("routing", {}))
+                        appeal["originalDecision"] = copy.deepcopy(appeal.get("originalDecision") or target.get("routing", {}))
                         target["humanOverride"] = {"route": override_route, "reason": note[:1000], "by": session["email"], "at": appeal["updatedAt"], "automatedDecisionPreserved": True}
                         target["routing"]["humanOverride"] = copy.deepcopy(target["humanOverride"])
                         target["routing"]["route"] = override_route
                         target["routing"]["routeLabel"] = f"{override_route.replace('_', ' ').title()} (Human Override)"
                         target["routing"]["verdictReason"] = f"Human override by {session['email']}: {note[:500]}"
+                        target["decisionExplanation"] = _decision_explanation(target)
                     entry = _audit_transition("appeal", appeal_id, "STATUS_CHANGED", session["email"], previous, status, note)
                     appeal.setdefault("history", []).append(copy.deepcopy(entry))
                     _audit_transition("record", appeal["recordId"], "HUMAN_OVERRIDE" if status == "OVERRIDDEN" else "APPEAL_REVIEWED", session["email"], previous, status, note)
+                    _persist_audit_state()
                     result = copy.deepcopy(appeal)
                 self._send_json(200, {"ok": True, "appeal": result})
             except Exception as exc:

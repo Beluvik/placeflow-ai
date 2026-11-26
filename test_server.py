@@ -491,8 +491,27 @@ def test_selective_campus_disruption_reroute() -> None:
     assert student_alerts[0]["recipient"] == "boundary.student@example.edu"
 
 
+
+def test_resource_outage_auto_matches_alternative_drive():
+    server.RESULTS_STORE.clear()
+    server.DISRUPTION_EVENTS.clear()
+    server.NOTIFICATIONS_STORE.clear()
+    server.JDS_STORE[:] = copy.deepcopy(DEFAULT_JDS)
+    server.SESSIONS["resource-token"] = {"role": "college", "email": server.COLLEGE_EMAIL, "name": "Placement Cell"}
+    ex = {"student_name": "Test Student", "email": "test.resource@example.edu", "branch": "CSE", "cgpa": 8.2, "active_backlogs": 0, "verified_skills": [{"skill": x, "evidence_source": "Capstone"} for x in ["Python", "SQL", "REST APIs", "Docker", "Git"]], "unverified_claims": []}
+    route = evaluate_deterministic_rules(ex, server.JDS_STORE[0], server.JDS_STORE)
+    assert route["route"] == "SHORTLISTED"
+    server.RESULTS_STORE.append({"id": "resource_candidate", "jdId": "cloud", "status": "ok", "extracted": ex, "routing": route, "skillTest": None, "ownerEmail": ex["email"]})
+    status, payload = _invoke("POST", "/api/college/disruption", {"jdId": "cloud", "triggerType": "resource_unavailable", "details": "Venue unavailable"}, token="resource-token")
+    result = json.loads(payload.decode("utf-8"))
+    assert status == 200 and result["recomputedCount"] == 1
+    assert result["diffs"][0]["alternative"]["jdId"] == "data"
+    assert result["diffs"][0]["alternative"]["company"] == "DataPulse Analytics"
+    assert len(server.NOTIFICATIONS_STORE) == 1
+
 if __name__ == "__main__":
     test_erp_and_deterministic_router()
     test_3_portal_rbac_and_proctored_test()
     test_selective_campus_disruption_reroute()
+    test_resource_outage_auto_matches_alternative_drive()
     print("ALL TESTS PASSED")

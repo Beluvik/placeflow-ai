@@ -403,7 +403,30 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
             if not session:
                 return
             with _LOCK:
-                entries = AUDIT_LOG if session["role"] == "college" else [e for e in AUDIT_LOG if e.get("studentEmail") == session["email"].lower()]
+                if session["role"] == "college":
+                    entries = AUDIT_LOG
+                else:
+                    student_email = session["email"].lower()
+                    owned_record_ids = {
+                        str(record.get("id"))
+                        for record in RESULTS_STORE
+                        if _record_belongs_to_student(record, student_email)
+                    }
+                    owned_appeal_ids = {
+                        str(appeal.get("id"))
+                        for appeal in APPEALS_STORE
+                        if appeal.get("studentEmail") == student_email
+                    }
+                    entries = [
+                        entry for entry in AUDIT_LOG
+                        if (
+                            entry.get("entityType") == "record"
+                            and str(entry.get("entityId")) in owned_record_ids
+                        ) or (
+                            entry.get("entityType") == "appeal"
+                            and str(entry.get("entityId")) in owned_appeal_ids
+                        )
+                    ]
                 self._send_json(200, {"ok": True, "entries": copy.deepcopy(entries[-200:])})
             return
 

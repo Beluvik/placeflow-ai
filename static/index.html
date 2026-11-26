@@ -104,6 +104,10 @@
             class="interactive-btn px-2 py-1.5 font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-[#8E8D89]">
             <span>Coordinator Exports</span>
           </button>
+          <button onclick="switchTab('disruptions')" id="tab-btn-disruptions"
+            class="interactive-btn px-2 py-1.5 font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-[#8E8D89]">
+            <span>Live Disruption Re-Router</span>
+          </button>
           <!-- HR Tab -->
           <button onclick="switchTab('hr')" id="tab-btn-hr"
             class="interactive-btn px-2 py-1.5 font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-[#8E8D89]">
@@ -625,6 +629,47 @@
     </section>
 
     <!-- ==================== HR PORTAL (HR-ONLY) ==================== -->
+        <!-- ==================== LIVE DISRUPTION RE-ROUTER ==================== -->
+    <section id="tab-disruptions" class="hidden space-y-6">
+      <div class="rounded-2xl border border-amber-300/50 dark:border-amber-800/60 bg-white dark:bg-zinc-900 p-5 sm:p-6 space-y-4">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <div class="text-[10px] font-mono tracking-widest text-amber-600 dark:text-amber-400">CAMPUS INCIDENT SIMULATOR · LIVE</div>
+            <h2 class="text-xl font-bold mt-1">Last-Minute Campus Chaos Re-Router</h2>
+            <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1 max-w-2xl">Trigger a real-time campus disruption. PlaceFlow identifies the candidates inside the changed eligibility boundary, recomputes only those records, and issues stakeholder-specific before/after alerts.</p>
+          </div>
+          <span class="px-2 py-1 rounded-lg border border-emerald-300 dark:border-emerald-800 text-[10px] font-mono text-emerald-700 dark:text-emerald-400">SELECTIVE RECOMPUTE</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label class="text-xs space-y-1">Placement drive
+            <select id="disruption-jd" class="w-full rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 p-3 text-sm"></select>
+          </label>
+          <label class="text-xs space-y-1">Disruption type
+            <select id="disruption-type" onchange="toggleDisruptionFields()" class="w-full rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 p-3 text-sm">
+              <option value="eligibility_cutoff">Eligibility cutoff changed</option>
+              <option value="cancellation">Placement drive cancelled</option>
+              <option value="resource_unavailable">Placement resource unavailable (venue / lab / slot)</option>
+            </select>
+          </label>
+          <label id="disruption-cutoff-wrap" class="text-xs space-y-1">New minimum CGPA (0–10)
+            <input id="disruption-cutoff" type="number" min="0" max="10" step="0.1" value="8.0" class="w-full rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 p-3 text-sm"/>
+          </label>
+          <label class="text-xs space-y-1">Incident note
+            <input id="disruption-details" placeholder="e.g. Recruiter updated eligibility 20 minutes before shortlist lock" class="w-full rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 p-3 text-sm"/>
+          </label>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <button onclick="triggerCampusDisruption()" id="disruption-trigger-btn" class="interactive-btn rounded-xl bg-[#F04E23] hover:bg-[#D9421A] text-white px-5 py-2.5 text-xs font-semibold">⚡ Trigger disruption &amp; re-route</button>
+          <button onclick="loadDisruptionPanel()" class="interactive-btn rounded-xl border border-stone-200 dark:border-zinc-700 px-4 py-2.5 text-xs">Refresh event log</button>
+        </div>
+        <div id="disruption-result" class="space-y-3"></div>
+      </div>
+      <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-3">
+        <div class="flex items-center justify-between gap-2"><h3 class="font-semibold text-sm">Targeted stakeholder alerts</h3><span id="disruption-alert-count" class="text-[11px] font-mono text-stone-500">0 alerts</span></div>
+        <div id="disruption-alerts" class="space-y-2 text-xs"><p class="text-stone-500">No disruption alerts yet.</p></div>
+      </div>
+    </section>
+
     <section id="tab-hr" class="hidden space-y-6">
       <!-- HR KPI Summary Strip -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -914,6 +959,98 @@
       return fetch(url, Object.assign({}, options, { headers }));
     }
 
+
+    function toggleDisruptionFields() {
+      const isCutoff = document.getElementById("disruption-type").value === "eligibility_cutoff";
+      document.getElementById("disruption-cutoff-wrap").classList.toggle("hidden", !isCutoff);
+    }
+
+    async function loadDisruptionPanel() {
+      const jdRes = await apiFetch("/api/jds");
+      const jdData = await jdRes.json();
+      const select = document.getElementById("disruption-jd");
+      const current = select.value;
+      select.innerHTML = (jdData.jds || []).filter(j => j.isActive !== false).map(j =>
+        '<option value="' + escapeHtml(j.id) + '">' + escapeHtml(j.company + " · " + j.role + " · cutoff " + j.minCgpa) + '</option>'
+      ).join("");
+      if (current && [...select.options].some(o => o.value === current)) select.value = current;
+      toggleDisruptionFields();
+
+      const [eventsRes, alertsRes] = await Promise.all([
+        apiFetch("/api/college/disruptions"), apiFetch("/api/notifications")
+      ]);
+      const eventsData = await eventsRes.json();
+      const alertsData = await alertsRes.json();
+      const events = eventsData.events || [];
+      const alerts = alertsData.notifications || [];
+      document.getElementById("disruption-alert-count").textContent = alerts.length + " alert(s)";
+      document.getElementById("disruption-alerts").innerHTML = alerts.length ? alerts.slice().reverse().map(n => `
+        <div class="rounded-xl border border-stone-200 dark:border-zinc-700 p-3 grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div><div class="font-semibold">${escapeHtml(n.studentName)}</div><div class="text-stone-500">${escapeHtml(n.recipient)}</div></div>
+          <div><div class="text-rose-600 dark:text-rose-400">BEFORE · ${escapeHtml(n.before.routeLabel || n.before.route || "—")}</div><div class="text-emerald-600 dark:text-emerald-400">AFTER · ${escapeHtml(n.after.routeLabel || n.after.route || "—")}</div></div>
+          <div class="text-stone-500">${escapeHtml(n.title)}<div class="mt-1">${escapeHtml(n.message)}</div></div>
+        </div>`).join("") : '<p class="text-stone-500">No disruption alerts yet. Trigger a campus event to generate targeted diffs.</p>';
+      if (!document.getElementById("disruption-result").innerHTML.trim()) {
+        document.getElementById("disruption-result").innerHTML = events.length ? events.slice().reverse().map(e =>
+          '<div class="text-xs border-t border-stone-200 dark:border-zinc-700 pt-3"><strong>' + escapeHtml(e.title) +
+          '</strong> · ' + e.recomputedCount + ' recomputed · ' + e.affectedCount + ' alerts · ' + escapeHtml(e.createdAt) + '</div>'
+        ).join("") : '<p class="text-xs text-stone-500">Event log is empty.</p>';
+      }
+    }
+
+    async function triggerCampusDisruption() {
+      const btn = document.getElementById("disruption-trigger-btn");
+      const type = document.getElementById("disruption-type").value;
+      const body = {
+        jdId: document.getElementById("disruption-jd").value,
+        triggerType: type,
+        newMinCgpa: type === "eligibility_cutoff" ? Number(document.getElementById("disruption-cutoff").value) : null,
+        details: document.getElementById("disruption-details").value.trim()
+      };
+      if (!body.jdId) return toast("Choose a placement drive first.", "error");
+      if (type === "eligibility_cutoff" && (!Number.isFinite(body.newMinCgpa) || body.newMinCgpa < 0 || body.newMinCgpa > 10)) return toast("Enter a CGPA cutoff from 0 to 10.", "error");
+      btn.disabled = true; btn.textContent = "Recomputing impacted records…";
+      try {
+        const res = await apiFetch("/api/college/disruption", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) return toast(data.error || "Disruption failed.", "error");
+        const event = data.event;
+        document.getElementById("disruption-result").innerHTML = `
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div class="rounded-xl bg-stone-100 dark:bg-zinc-800 p-3"><div class="text-[10px] text-stone-500">Candidate pool</div><div class="text-2xl font-bold">${event.candidatePoolCount}</div></div>
+            <div class="rounded-xl bg-stone-100 dark:bg-zinc-800 p-3"><div class="text-[10px] text-stone-500">Recomputed only</div><div class="text-2xl font-bold">${data.recomputedCount}</div></div>
+            <div class="rounded-xl bg-stone-100 dark:bg-zinc-800 p-3"><div class="text-[10px] text-stone-500">Changed outcomes</div><div class="text-2xl font-bold">${data.affectedCount}</div></div>
+            <div class="rounded-xl bg-stone-100 dark:bg-zinc-800 p-3"><div class="text-[10px] text-stone-500">Unaffected records</div><div class="text-2xl font-bold">${data.unaffectedCount}</div></div>
+          </div>
+          <div class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">✓ Disruption applied. Only the impacted cohort was recomputed.</div>
+          <div class="rounded-xl border border-stone-200 dark:border-zinc-700 p-4 space-y-3">
+            <div class="text-xs font-semibold">Alternative-drive impact map</div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <div class="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-3"><div class="text-[10px] text-stone-500">Found an alternative</div><div class="text-xl font-bold text-emerald-700 dark:text-emerald-400">${data.impactSummary?.alternativeFound ?? 0}</div></div>
+              <div class="rounded-lg bg-rose-50 dark:bg-rose-950/30 p-3"><div class="text-[10px] text-stone-500">No eligible alternative</div><div class="text-xl font-bold text-rose-700 dark:text-rose-400">${data.impactSummary?.noAlternative ?? 0}</div></div>
+              <div class="rounded-lg bg-stone-100 dark:bg-zinc-800 p-3"><div class="text-[10px] text-stone-500">Alternative drives checked</div><div class="text-xl font-bold">${event.alternativeDriveCount || 0}</div></div>
+            </div>
+            ${(data.impactSummary?.candidateExplanations || []).map(row => "<div class=\"rounded-lg border border-stone-200 dark:border-zinc-700 p-3 text-xs space-y-2\"><div class=\"font-semibold\">" + escapeHtml(row.studentName) + " · " + (row.alternative ? escapeHtml(row.alternative.company) + " (" + row.alternative.fitPct + "% fit)" : "No eligible alternative") + "</div>" + (row.evaluations || []).map(ev => "<div class=\"flex flex-wrap items-center gap-2 text-stone-500\"><span>" + escapeHtml(ev.company) + " — " + ev.fitPct + "% skill fit</span><span class=\"" + (ev.eligible ? "text-emerald-600" : "text-rose-600") + "\">" + (ev.eligible ? "Eligible" : "Rejected") + "</span><span>CGPA " + (ev.gates.cgpa ? "✓" : "✕") + " · Branch " + (ev.gates.branch ? "✓" : "✕") + " · Backlogs " + (ev.gates.backlogs ? "✓" : "✕") + "</span></div>" + (ev.missingSkills?.length ? "<div class=\"text-[11px]\">Skill gaps: " + ev.missingSkills.map(escapeHtml).join(", ") + "</div>" : "")).join("") + "</div>").join("")}
+          </div>
+          ${(data.diffs || []).map(d => `
+            <div class="rounded-xl border border-stone-200 dark:border-zinc-700 p-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+              <div><strong>${escapeHtml(d.studentName)}</strong><div class="text-stone-500">${escapeHtml(d.studentEmail)}</div></div>
+              <div><div class="text-rose-600 dark:text-rose-400">BEFORE · ${escapeHtml(d.before.routeLabel || d.before.route || "—")}</div><div class="text-emerald-600 dark:text-emerald-400">AFTER · ${escapeHtml(d.after.routeLabel || d.after.route || "—")}</div></div>
+              <div class="text-stone-500">${escapeHtml(d.after.reason || event.reason)}</div>
+            </div>`).join("") || '<p class="text-xs text-stone-500">No candidate outcome changed for this trigger.</p>'}
+        `;
+        toast("Campus disruption processed: " + data.recomputedCount + " record(s) recomputed.");
+        await Promise.all([loadCollegeResults(), loadCollegeAnalytics()]);
+        await loadDisruptionPanel();
+      } catch (err) {
+        toast("Could not process disruption: " + err.message, "error");
+      } finally {
+        btn.disabled = false; btn.textContent = "⚡ Trigger disruption & re-route";
+      }
+    }
+
     async function init() {
       applySavedTheme();
       setupDropzone();
@@ -1073,11 +1210,12 @@
       document.getElementById("tab-btn-router").classList.toggle("hidden", !isCollege);
       document.getElementById("tab-btn-analytics").classList.toggle("hidden", !isCollege);
       document.getElementById("tab-btn-actions").classList.toggle("hidden", !isCollege);
+      document.getElementById("tab-btn-disruptions").classList.toggle("hidden", !isCollege);
       document.getElementById("tab-btn-hr").classList.toggle("hidden", !isHr);
       document.getElementById("tab-btn-student").classList.toggle("hidden", !isStudent);
 
       if (!isSignedIn) {
-        ["router", "analytics", "actions", "hr", "student"].forEach(t => document.getElementById("tab-" + t).classList.add("hidden"));
+        ["router", "analytics", "actions", "disruptions", "hr", "student"].forEach(t => document.getElementById("tab-" + t).classList.add("hidden"));
         return;
       }
       if (isCollege) {
@@ -2178,7 +2316,7 @@
     }
 
     function switchTab(tab) {
-      ["router", "analytics", "actions", "hr", "student"].forEach(t => {
+      ["router", "analytics", "actions", "disruptions", "hr", "student"].forEach(t => {
         document.getElementById("tab-" + t).classList.toggle("hidden", t !== tab);
         const btn = document.getElementById("tab-btn-" + t);
         if (btn) {
@@ -2188,6 +2326,7 @@
         }
       });
       if (tab === "analytics") loadCollegeAnalytics();
+      if (tab === "disruptions") loadDisruptionPanel();
     }
 
     function openKeyModal() { document.getElementById("key-modal").classList.remove("hidden"); document.getElementById("key-modal").classList.add("flex"); }

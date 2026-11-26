@@ -14,6 +14,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from erp_db import COLLEGE_ERP_DB, compute_credibility_score, verify_against_erp
+from disruption_engine import build_before_after, make_notification, route_changed
 from router_engine import (
     DEFAULT_JDS,
     GEMINI_MODELS,
@@ -43,6 +44,8 @@ RESULTS_STORE: list[dict[str, Any]] = []
 JDS_STORE: list[dict[str, Any]] = copy.deepcopy(DEFAULT_JDS)
 ACTIVE_JD_SNAPSHOT: dict[str, Any] = JDS_STORE[0]
 TESTS_STORE: dict[str, dict[str, Any]] = {}
+DISRUPTION_EVENTS: list[dict[str, Any]] = []
+NOTIFICATIONS_STORE: list[dict[str, Any]] = []
 
 
 def load_api_key() -> str:
@@ -323,6 +326,27 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     }
                 )
             self._send_json(200, {"files": files})
+            return
+
+        if path == "/api/college/disruptions":
+            if not self._require_role("college"):
+                return
+            with _LOCK:
+                self._send_json(200, {"ok": True, "events": copy.deepcopy(DISRUPTION_EVENTS)})
+            return
+
+        if path == "/api/notifications":
+            session = self._require_role("college", "hr", "student")
+            if not session:
+                return
+            with _LOCK:
+                if session["role"] == "college":
+                    items = copy.deepcopy(NOTIFICATIONS_STORE)
+                elif session["role"] == "student":
+                    items = copy.deepcopy([n for n in NOTIFICATIONS_STORE if n.get("recipient") == session["email"].lower()])
+                else:
+                    items = copy.deepcopy([n for n in NOTIFICATIONS_STORE if "hr" in n.get("stakeholders", [])])
+            self._send_json(200, {"ok": True, "notifications": items})
             return
 
         if path == "/api/college/results":
@@ -618,6 +642,207 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                 self._send_json(400, {"error": str(exc)})
             return
 
+        if path == "/api/college/disruption":
+            session = self._require_role("college")
+            if not session:
+                return
+            try:
+                body = self._read_json()
+                jd_id = str(body.get("jdId") or "").strip()
+                trigger_type = str(body.get("triggerType") or "eligibility_cutoff").strip().lower()
+                if trigger_type not in ("eligibility_cutoff", "cancellation", "resource_unavailable"):
+                    self._send_json(400, {"error": "Trigger must be eligibility_cutoff, cancellation, or resource_unavailable."})
+                    return
+                with _LOCK:
+                    jd = next((item for item in JDS_STORE if item.get("id") == jd_id), None)
+                    if not jd:
+                        self._send_json(404, {"error": "Target placement drive not found."})
+                        return
+                    old_cutoff = float(jd.get("minCgpa") or 0)
+                    new_cutoff = old_cutoff
+                    if trigger_type == "eligibility_cutoff":
+                        if body.get("newMinCgpa") in (None, ""):
+                            self._send_json(400, {"error": "newMinCgpa is required for a cutoff change."})
+                            return
+                        new_cutoff = float(body["newMinCgpa"])
+                        if not 0 <= new_cutoff <= 10:
+                            self._send_json(400, {"error": "CGPA cutoff must be between 0 and 10."})
+                            return
+                        if new_cutoff == old_cutoff:
+                            self._send_json(400, {"error": "New cutoff must differ from the current cutoff."})
+                            return
+                        jd["minCgpa"] = new_cutoff
+                    else:
+                        jd["isActive"] = False
+
+                    event_id = f"dis_{secrets.token_hex(5)}"
+                    default_title = (
+                        "Eligibility cutoff changed" if trigger_type == "eligibility_cutoff"
+                        else ("Campus resource unavailable" if trigger_type == "resource_unavailable" else "Placement drive cancelled")
+                    )
+                    default_reason = (
+                        f"{jd.get('company')} raised the CGPA cutoff from {old_cutoff:.2f} to {new_cutoff:.2f}."
+                        if trigger_type == "eligibility_cutoff"
+                        else (
+                            f"A required campus resource for {jd.get('company')} — {jd.get('role')} is unavailable."
+                            if trigger_type == "resource_unavailable"
+                            else f"{jd.get('company')} — {jd.get('role')} has been cancelled."
+                        )
+                    )
+                    title = str(body.get("title") or default_title)[:120]
+                    reason = str(body.get("details") or default_reason)[:500]
+                    event = {
+                        "id": event_id, "triggerType": trigger_type, "jdId": jd_id,
+                        "company": jd.get("company"), "role": jd.get("role"),
+                        "title": title, "reason": reason,
+                        "oldMinCgpa": old_cutoff, "newMinCgpa": new_cutoff,
+                        "createdAt": time.strftime("%Y-%m-%d %H:%M:%S"),
+                        "triggeredBy": session["email"],
+                    }
+                    target_records = [
+                        r for r in RESULTS_STORE
+                        if r.get("status") == "ok"
+                        and (r.get("jdId") or ACTIVE_JD_SNAPSHOT.get("id")) == jd_id
+                    ]
+                    if trigger_type == "eligibility_cutoff":
+                        low, high = sorted((old_cutoff, new_cutoff))
+                        impacted = []
+                        for record in target_records:
+                            ex = record.get("extracted", {})
+                            official = record.get("routing", {}).get("erpVerification", {}).get("officialCgpa")
+                            cgpa = float(official if official is not None else ex.get("cgpa") or 0)
+                            if low <= cgpa < high:
+                                impacted.append(record)
+                    else:
+                        impacted = target_records
+
+                    diffs = []
+                    alternative_jds = [
+                        item for item in JDS_STORE
+                        if item.get("isActive", True) and item.get("id") != jd_id
+                    ]
+                    impact_rows = []
+                    for record in impacted:
+                        before = copy.deepcopy(record.get("routing") or {})
+                        after = copy.deepcopy(before)
+                        if trigger_type in ("cancellation", "resource_unavailable"):
+                            ranked = []
+                            evaluated_alternatives = []
+                            for alternative in alternative_jds:
+                                candidate_route = evaluate_deterministic_rules(
+                                    record.get("extracted", {}), alternative, alternative_jds,
+                                    skill_test=record.get("skillTest")
+                                )
+                                gates = {
+                                    "cgpa": bool(candidate_route.get("passesCgpa")),
+                                    "branch": bool(candidate_route.get("passesBranch")),
+                                    "backlogs": bool(candidate_route.get("passesBacklogs")),
+                                }
+                                eligible = all(gates.values())
+                                evaluated_alternatives.append({
+                                    "jdId": alternative.get("id"),
+                                    "company": alternative.get("company"),
+                                    "role": alternative.get("role"),
+                                    "fitPct": candidate_route.get("matchPct", 0),
+                                    "eligible": eligible,
+                                    "gates": gates,
+                                    "missingSkills": copy.deepcopy(candidate_route.get("missingMustHave", [])),
+                                    "matchedSkills": copy.deepcopy(candidate_route.get("matchedMustHave", [])),
+                                })
+                                if eligible:
+                                    ranked.append((candidate_route.get("matchPct", 0), alternative, candidate_route))
+                            ranked.sort(key=lambda item: (item[0], item[1].get("company", "")), reverse=True)
+                            if ranked:
+                                _, chosen_alternative, after = ranked[0]
+                                after["alternativeEvaluations"] = evaluated_alternatives
+                                after["route"] = "REROUTED"
+                                after["routeLabel"] = f"Auto-Rerouted · {chosen_alternative.get('company')}"
+                                after["verdictReason"] = (
+                                    f"Original drive {jd.get('company')} — {jd.get('role')} became unavailable. "
+                                    f"Matched to {chosen_alternative.get('company')} — {chosen_alternative.get('role')} "
+                                    f"with {after.get('matchPct', 0)}% verified skill fit and passed academic eligibility."
+                                )
+                                after["alternativeJd"] = {
+                                    "jdId": chosen_alternative.get("id"),
+                                    "company": chosen_alternative.get("company"),
+                                    "role": chosen_alternative.get("role"),
+                                    "ctc": chosen_alternative.get("ctc", ""),
+                                    "fitPct": after.get("matchPct", 0),
+                                }
+                            else:
+                                after["route"] = "REROUTED"
+                                after["routeLabel"] = "No eligible alternative"
+                                after["verdictReason"] = (
+                                    f"{jd.get('company')} — {jd.get('role')} became unavailable. "
+                                    "No other active drive passed this student's academic eligibility rules."
+                                )
+                                after["alternativeJd"] = None
+                                after["alternativeEvaluations"] = evaluated_alternatives
+                            impact_rows.append({
+                                "recordId": record.get("id"),
+                                "studentName": record.get("extracted", {}).get("student_name") or "Student",
+                                "alternative": copy.deepcopy(after.get("alternativeJd")),
+                                "evaluations": copy.deepcopy(after.get("alternativeEvaluations", [])),
+                            })
+                        else:
+                            active_jds = [item for item in JDS_STORE if item.get("isActive", True)]
+                            after = evaluate_deterministic_rules(
+                                record.get("extracted", {}), jd, active_jds,
+                                skill_test=record.get("skillTest")
+                            )
+                        diff = build_before_after(record, after)
+                        diff["alternative"] = copy.deepcopy(after.get("alternativeJd"))
+                        record["routing"] = after
+                        record["disruptionHistory"] = record.get("disruptionHistory", [])
+                        record["disruptionHistory"].append({
+                            "eventId": event_id, "before": diff["before"], "after": diff["after"],
+                            "alternative": diff["alternative"],
+                        })
+                        if route_changed(diff):
+                            diffs.append(diff)
+                            notification = make_notification(event, diff, event["createdAt"])
+                            notification["alternative"] = copy.deepcopy(diff["alternative"])
+                            NOTIFICATIONS_STORE.append(notification)
+
+                    alternative_distribution = {}
+                    for row in impact_rows:
+                        chosen = row.get("alternative")
+                        if chosen:
+                            company = chosen.get("company") or "Unknown"
+                            alternative_distribution[company] = alternative_distribution.get(company, 0) + 1
+                    found_count = sum(1 for row in impact_rows if row.get("alternative"))
+                    event["impactSummary"] = {
+                        "recomputed": len(impacted),
+                        "changed": len(diffs),
+                        "alternativeFound": found_count,
+                        "noAlternative": len(impact_rows) - found_count,
+                        "alternativeDistribution": [
+                            {"company": company, "count": count}
+                            for company, count in sorted(alternative_distribution.items(), key=lambda item: (-item[1], item[0]))
+                        ],
+                        "candidateExplanations": impact_rows,
+                    }
+                    event["candidatePoolCount"] = len(target_records)
+                    event["alternativeDriveCount"] = len(alternative_jds)
+                    event["recomputedCount"] = len(impacted)
+                    event["affectedCount"] = len(diffs)
+                    event["unaffectedCount"] = max(0, len(RESULTS_STORE) - len(impacted))
+                    event["diffs"] = diffs
+                    DISRUPTION_EVENTS.append(event)
+                    response_event = copy.deepcopy(event)
+
+                self._send_json(200, {"ok": True, "event": response_event,
+                                      "recomputedCount": len(impacted),
+                                      "affectedCount": len(diffs),
+                                      "unaffectedCount": event["unaffectedCount"],
+                                      "impactSummary": response_event.get("impactSummary", {}),
+                                      "diffs": diffs})
+            except (TypeError, ValueError) as exc:
+                self._send_json(400, {"error": f"Invalid disruption input: {exc}"})
+            except Exception as exc:
+                self._send_json(500, {"error": str(exc)})
+            return
+
         if path == "/api/hr/decision":
             session = self._require_role("hr")
             if not session:
@@ -720,6 +945,7 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
 
                 record = {
                     "id": rec_id,
+                    "jdId": str(jd.get("id") or ""),
                     "fileName": file_name,
                     "status": "ok",
                     "uploadedBy": "student" if is_student_upload else "college",

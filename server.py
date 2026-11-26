@@ -14,7 +14,8 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from erp_db import COLLEGE_ERP_DB, compute_credibility_score, verify_against_erp
-from disruption_engine import build_before_after, make_notification, route_changed\nfrom router_engine import (
+from disruption_engine import build_before_after, make_notification, route_changed
+from router_engine import (
     DEFAULT_JDS,
     GEMINI_MODELS,
     build_jd_prep_plan,
@@ -42,7 +43,9 @@ SESSIONS: dict[str, dict[str, str]] = {}
 RESULTS_STORE: list[dict[str, Any]] = []
 JDS_STORE: list[dict[str, Any]] = copy.deepcopy(DEFAULT_JDS)
 ACTIVE_JD_SNAPSHOT: dict[str, Any] = JDS_STORE[0]
-TESTS_STORE: dict[str, dict[str, Any]] = {}\nDISRUPTION_EVENTS: list[dict[str, Any]] = []\nNOTIFICATIONS_STORE: list[dict[str, Any]] = []
+TESTS_STORE: dict[str, dict[str, Any]] = {}
+DISRUPTION_EVENTS: list[dict[str, Any]] = []
+NOTIFICATIONS_STORE: list[dict[str, Any]] = []
 
 
 def load_api_key() -> str:
@@ -647,8 +650,8 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                 body = self._read_json()
                 jd_id = str(body.get("jdId") or "").strip()
                 trigger_type = str(body.get("triggerType") or "eligibility_cutoff").strip().lower()
-                if trigger_type not in ("eligibility_cutoff", "cancellation"):
-                    self._send_json(400, {"error": "Trigger must be eligibility_cutoff or cancellation."})
+                if trigger_type not in ("eligibility_cutoff", "cancellation", "resource_unavailable"):
+                    self._send_json(400, {"error": "Trigger must be eligibility_cutoff, cancellation, or resource_unavailable."})
                     return
                 with _LOCK:
                     jd = next((item for item in JDS_STORE if item.get("id") == jd_id), None)
@@ -701,13 +704,51 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                         impacted = target_records
 
                     diffs = []
+                    alternative_jds = [
+                        item for item in JDS_STORE
+                        if item.get("isActive", True) and item.get("id") != jd_id
+                    ]
                     for record in impacted:
                         before = copy.deepcopy(record.get("routing") or {})
-                        if trigger_type == "cancellation":
-                            after = copy.deepcopy(before)
-                            after["route"] = "REROUTED"
-                            after["routeLabel"] = "Disruption: Drive Cancelled"
-                            after["verdictReason"] = f"Placement drive cancelled: {reason} Re-evaluate against another active drive."
+                        after = copy.deepcopy(before)
+                        if trigger_type in ("cancellation", "resource_unavailable"):
+                            ranked = []
+                            for alternative in alternative_jds:
+                                candidate_route = evaluate_deterministic_rules(
+                                    record.get("extracted", {}), alternative, alternative_jds,
+                                    skill_test=record.get("skillTest")
+                                )
+                                if candidate_route.get("passesCgpa") and candidate_route.get("passesBranch") and candidate_route.get("passesBacklogs"):
+                                    ranked.append((
+                                        candidate_route.get("matchPct", 0),
+                                        alternative,
+                                        candidate_route,
+                                    ))
+                            ranked.sort(key=lambda item: (item[0], item[1].get("company", "")), reverse=True)
+                            if ranked:
+                                _, chosen_alternative, after = ranked[0]
+                                after["route"] = "REROUTED"
+                                after["routeLabel"] = f"Auto-Rerouted · {chosen_alternative.get('company')}"
+                                after["verdictReason"] = (
+                                    f"Original drive {jd.get('company')} — {jd.get('role')} became unavailable. "
+                                    f"Matched to {chosen_alternative.get('company')} — {chosen_alternative.get('role')} "
+                                    f"with {after.get('matchPct', 0)}% verified skill fit and passed academic eligibility."
+                                )
+                                after["alternativeJd"] = {
+                                    "jdId": chosen_alternative.get("id"),
+                                    "company": chosen_alternative.get("company"),
+                                    "role": chosen_alternative.get("role"),
+                                    "ctc": chosen_alternative.get("ctc", ""),
+                                    "fitPct": after.get("matchPct", 0),
+                                }
+                            else:
+                                after["route"] = "REROUTED"
+                                after["routeLabel"] = "No eligible alternative"
+                                after["verdictReason"] = (
+                                    f"{jd.get('company')} — {jd.get('role')} became unavailable. "
+                                    "No other active drive passed this student's academic eligibility rules."
+                                )
+                                after["alternativeJd"] = None
                         else:
                             active_jds = [item for item in JDS_STORE if item.get("isActive", True)]
                             after = evaluate_deterministic_rules(
@@ -715,15 +756,21 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                                 skill_test=record.get("skillTest")
                             )
                         diff = build_before_after(record, after)
+                        diff["alternative"] = copy.deepcopy(after.get("alternativeJd"))
                         record["routing"] = after
-                        record.setdefault("disruptionHistory", []).append({
-                            "eventId": event_id, "before": diff["before"], "after": diff["after"]
+                        record["disruptionHistory"] = record.get("disruptionHistory", [])
+                        record["disruptionHistory"].append({
+                            "eventId": event_id, "before": diff["before"], "after": diff["after"],
+                            "alternative": diff["alternative"],
                         })
                         if route_changed(diff):
                             diffs.append(diff)
-                            NOTIFICATIONS_STORE.append(make_notification(event, diff, event["createdAt"]))
+                            notification = make_notification(event, diff, event["createdAt"])
+                            notification["alternative"] = copy.deepcopy(diff["alternative"])
+                            NOTIFICATIONS_STORE.append(notification)
 
                     event["candidatePoolCount"] = len(target_records)
+                    event["alternativeDriveCount"] = len(alternative_jds)
                     event["recomputedCount"] = len(impacted)
                     event["affectedCount"] = len(diffs)
                     event["unaffectedCount"] = max(0, len(RESULTS_STORE) - len(impacted))

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -19,10 +19,45 @@
     };
   </script>
   <style>
+    :root { --pf-signal: #F04E23; --pf-signal-hover: #D9421A; }
+    html.dark body { background-color: #0D0D0C !important; color: #F4F3EF !important; }
+    html.dark header { background-color: rgba(13, 13, 12, 0.92) !important; border-color: #232320 !important; }
+    html.dark .dark\:bg-zinc-950 { background-color: #0D0D0C !important; }
+    html.dark .dark\:bg-zinc-900 { background-color: #141413 !important; }
+    html.dark .dark\:bg-zinc-800 { background-color: #1D1D1B !important; }
+    html.dark .dark\:border-zinc-800 { border-color: #272724 !important; }
+    html.dark .dark\:border-zinc-700 { border-color: #32322E !important; }
+    html.dark .dark\:text-zinc-400 { color: #8E8D89 !important; }
+    html.dark .dark\:text-zinc-300 { color: #CBCAC4 !important; }
+    /* Harmonize primary action fills with Signal Orange (#F04E23) */
+    .bg-blue-600 { background-color: #F04E23 !important; }
+    .hover\:bg-blue-700:hover { background-color: #D9421A !important; }
+    .ring-blue-600 { --tw-ring-color: #F04E23 !important; }
+    .border-blue-600, .border-blue-500 { border-color: #F04E23 !important; }
+    html.dark .dark\:text-blue-400, html.dark .dark\:text-blue-300 { color: #FF7854 !important; }
+    html.dark .dark\:bg-blue-950\/50, html.dark .dark\:bg-blue-950\/20, html.dark .dark\:bg-blue-950 { background-color: rgba(240, 78, 35, 0.12) !important; }
+    html.dark .dark\:border-blue-800 { border-color: rgba(240, 78, 35, 0.45) !important; }
+
+    .signal-underline {
+      display: inline-block;
+      border-bottom: 5px solid #F04E23;
+      padding-bottom: 1px;
+      line-height: 1.02;
+    }
+    @keyframes blinkCursor { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+    .cursor-block {
+      display: inline-block;
+      width: 7px;
+      height: 14px;
+      background-color: #F04E23;
+      vertical-align: -2px;
+      margin-left: 2px;
+      animation: blinkCursor 1s step-end infinite;
+    }
     @keyframes dashFlow { to { stroke-dashoffset: -24; } }
     .svg-flow-line { stroke-dasharray: 6 6; transition: stroke 200ms ease, opacity 200ms ease; }
     .svg-flow-active { animation: dashFlow 0.7s linear infinite; }
-    .interactive-btn { transition: transform 130ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease; }
+    .interactive-btn { transition: transform 130ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
     .interactive-btn:hover:not(:disabled) { transform: translateY(-1px); }
     .interactive-btn:active:not(:disabled) { transform: translateY(0px) scale(0.975); }
     .interactive-card { transition: transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 150ms ease, border-color 150ms ease; }
@@ -30,63 +65,65 @@
     .drawer-enter { transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1); }
   </style>
 </head>
-<body class="bg-stone-50 text-stone-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased min-h-screen transition-colors">
+<body class="bg-stone-50 text-stone-900 dark:bg-[#0D0D0C] dark:text-[#F4F3EF] antialiased min-h-screen transition-colors">
 
-  <!-- Sticky Top Command Header -->
-  <header class="sticky top-0 z-30 border-b border-stone-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-      <div class="flex items-center gap-3 min-w-0">
-        <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm tracking-tight shrink-0 shadow-sm">
-          PF
-        </div>
-        <div class="min-w-0">
-          <div class="flex items-center gap-2">
-            <span class="font-semibold text-sm sm:text-base tracking-tight truncate">PlaceFlow AI</span>
-            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-stone-700 dark:text-zinc-300">
-              PS-CA4
-            </span>
+  <!-- Minimalist Top Command Header (CampusFlow Editorial Layout) -->
+  <header class="sticky top-0 z-30 border-b border-stone-200 dark:border-[#232320] bg-white/90 dark:bg-[#0D0D0C]/92 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-6 min-w-0">
+        <a href="#" onclick="event.preventDefault()" class="flex items-center gap-2.5 min-w-0 shrink-0">
+          <div class="w-6 h-6 rounded-[6px] bg-[#F04E23] flex items-center justify-center shrink-0">
+            <span class="w-2 h-2 rounded-[2px] bg-[#0D0D0C] block"></span>
           </div>
-          <p class="text-[11px] text-stone-500 dark:text-zinc-400 truncate hidden md:block">
-            Campus Automation · College ERP · HR Credibility · Proctored Skill Verification
-          </p>
-        </div>
-      </div>
+          <span class="font-bold text-base tracking-tight truncate">PlaceFlow</span>
+          <span class="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono text-stone-500 dark:text-[#8E8D89] border border-stone-200 dark:border-[#292926]">
+            PS-CA4
+          </span>
+        </a>
 
-      <!-- Role-Scoped Navigation -->
-      <nav id="main-nav" class="hidden items-center gap-1 p-1 rounded-xl bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 overflow-x-auto">
-        <!-- College Tabs -->
-        <button onclick="switchTab('router')" id="tab-btn-router"
-          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm">
-          <span>Auto-Router</span>
-          <span id="badge-processed-count" class="px-1.5 rounded-full text-[10px] font-mono bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">0</span>
-        </button>
-        <button onclick="switchTab('analytics')" id="tab-btn-analytics"
-          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-zinc-400">
-          <span>Branch Stats &amp; ERP</span>
-        </button>
-        <button onclick="switchTab('actions')" id="tab-btn-actions"
-          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-zinc-400">
-          <span>Coordinator Exports</span>
-        </button>
-        <!-- HR Tab -->
-        <button onclick="switchTab('hr')" id="tab-btn-hr"
-          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-zinc-400">
-          <span>HR Credibility Portal</span>
-        </button>
-        <!-- Student Tab -->
-        <button onclick="switchTab('student')" id="tab-btn-student"
-          class="interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-zinc-400">
-          <span>My Student Portal</span>
-        </button>
-      </nav>
+        <!-- Unsigned Hero Anchor Links (when signed out) -->
+        <div id="guest-nav" class="hidden sm:flex items-center gap-5 text-xs font-medium text-stone-500 dark:text-[#8E8D89]">
+          <a href="#portal-signin" class="hover:text-stone-900 dark:hover:text-[#F4F3EF] transition">Portals</a>
+          <a href="#portal-signin" onclick="pickDemoStudent('ananya.rao@rit.edu')" class="hover:text-stone-900 dark:hover:text-[#F4F3EF] transition">Student</a>
+          <a href="#portal-signin" class="hover:text-stone-900 dark:hover:text-[#F4F3EF] transition">Routing</a>
+        </div>
+
+        <!-- Role-Scoped Navigation (when signed in) -->
+        <nav id="main-nav" class="hidden items-center gap-4 overflow-x-auto text-xs">
+          <!-- College Tabs -->
+          <button onclick="switchTab('router')" id="tab-btn-router"
+            class="interactive-btn px-2 py-1.5 font-medium flex items-center gap-1.5 cursor-pointer text-[#F4F3EF] border-b-2 border-[#F04E23]">
+            <span>Auto-Router</span>
+            <span id="badge-processed-count" class="px-1.5 rounded-full text-[10px] font-mono bg-[#F04E23]/15 text-[#FF7854] border border-[#F04E23]/40">0</span>
+          </button>
+          <button onclick="switchTab('analytics')" id="tab-btn-analytics"
+            class="interactive-btn px-2 py-1.5 font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-[#8E8D89]">
+            <span>Branch Stats &amp; ERP</span>
+          </button>
+          <button onclick="switchTab('actions')" id="tab-btn-actions"
+            class="interactive-btn px-2 py-1.5 font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-[#8E8D89]">
+            <span>Coordinator Exports</span>
+          </button>
+          <!-- HR Tab -->
+          <button onclick="switchTab('hr')" id="tab-btn-hr"
+            class="interactive-btn px-2 py-1.5 font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-[#8E8D89]">
+            <span>HR Credibility Portal</span>
+          </button>
+          <!-- Student Tab -->
+          <button onclick="switchTab('student')" id="tab-btn-student"
+            class="interactive-btn px-2 py-1.5 font-medium flex items-center gap-1.5 cursor-pointer text-stone-600 dark:text-[#8E8D89]">
+            <span>My Student Portal</span>
+          </button>
+        </nav>
+      </div>
 
       <div class="flex items-center gap-2 shrink-0">
         <!-- Convenient 1-Click Demo Role Switcher (visible when signed in) -->
-        <div id="demo-switcher" class="hidden items-center gap-1 p-1 rounded-xl border border-stone-200 dark:border-zinc-800 bg-stone-100 dark:bg-zinc-900">
-          <span class="text-[10px] font-mono uppercase px-1.5 text-stone-400 hidden xl:inline">Switch:</span>
-          <button onclick="quickSwitch('college')" id="sw-college" class="interactive-btn px-2 py-1 rounded-lg text-[11px] font-semibold cursor-pointer">College</button>
-          <button onclick="quickSwitch('hr')" id="sw-hr" class="interactive-btn px-2 py-1 rounded-lg text-[11px] font-semibold cursor-pointer">HR</button>
-          <select id="sw-student" onchange="if(this.value) quickSwitch('student', this.value)" class="rounded-lg bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 px-1.5 py-1 text-[11px] font-semibold cursor-pointer">
+        <div id="demo-switcher" class="hidden items-center gap-1 p-1 rounded-xl border border-stone-200 dark:border-[#32322E] bg-stone-100 dark:bg-[#141413]">
+          <span class="text-[10px] font-mono uppercase px-1.5 text-stone-400 dark:text-[#8E8D89] hidden xl:inline">Role:</span>
+          <button onclick="quickSwitch('college')" id="sw-college" class="interactive-btn px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer">College</button>
+          <button onclick="quickSwitch('hr')" id="sw-hr" class="interactive-btn px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer">HR</button>
+          <select id="sw-student" onchange="if(this.value) quickSwitch('student', this.value)" class="rounded-lg bg-white dark:bg-[#1D1D1B] border border-stone-200 dark:border-[#32322E] px-1.5 py-1 text-[11px] font-semibold cursor-pointer">
             <option value="">Student ▾</option>
             <option value="ananya.rao@rit.edu">Ananya (ISE)</option>
             <option value="kiran.gowda@rit.edu">Kiran (ECE)</option>
@@ -96,124 +133,209 @@
           </select>
         </div>
 
-        <span id="role-badge" class="hidden items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border border-stone-200 dark:border-zinc-800 bg-stone-100 dark:bg-zinc-900 text-stone-700 dark:text-zinc-300"></span>
+        <span id="role-badge" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-stone-200 dark:border-[#32322E] bg-stone-100 dark:bg-[#141413] text-stone-700 dark:text-[#F4F3EF]"></span>
 
         <button onclick="openKeyModal()" id="api-key-pill"
-          class="hidden interactive-btn items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border cursor-pointer bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300">
+          class="hidden interactive-btn items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border cursor-pointer bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700/50 text-amber-800 dark:text-amber-300">
           <span id="api-key-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
           <span id="api-key-label">Set Gemini Key</span>
         </button>
 
         <button onclick="logout()" id="logout-btn"
-          class="hidden interactive-btn px-2.5 py-1.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-rose-400 text-xs font-medium cursor-pointer">
+          class="hidden interactive-btn px-3 py-1.5 rounded-xl border border-stone-200 dark:border-[#32322E] bg-white dark:bg-[#141413] hover:border-rose-400 text-xs font-medium cursor-pointer">
           Sign Out
         </button>
 
+        <a href="#portal-signin" id="header-staff-pill" onclick="document.getElementById('portal-signin')?.scrollIntoView({behavior:'smooth'})"
+          class="interactive-btn inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-stone-300 dark:border-[#40403B] bg-white dark:bg-transparent hover:border-[#F04E23] text-xs font-semibold cursor-pointer">
+          Portal view: Sign in
+        </a>
+
         <button onclick="toggleTheme()" title="Switch Light / Dark Mode"
-          class="interactive-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-stone-100 dark:hover:bg-zinc-800 text-xs font-medium cursor-pointer">
-          <svg class="w-4 h-4 hidden dark:block text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32 1.41-1.41"/></svg>
-          <svg class="w-4 h-4 block dark:hidden text-zinc-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/></svg>
-          <span id="theme-label" class="hidden sm:inline">Dark</span>
+          class="interactive-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-stone-200 dark:border-[#32322E] bg-white dark:bg-[#141413] text-xs font-medium cursor-pointer">
+          <svg class="w-3.5 h-3.5 hidden dark:block text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32 1.41-1.41"/></svg>
+          <svg class="w-3.5 h-3.5 block dark:hidden text-zinc-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z"/></svg>
+          <span id="theme-label" class="hidden sm:inline">Light</span>
         </button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+  <main class="max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-8">
 
-    <!-- ==================== 3-PORTAL ROLE SIGN-IN GATE ==================== -->
-    <section id="auth-gate" class="max-w-6xl mx-auto py-4 space-y-6">
-      <div class="text-center space-y-2">
-        <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
-          3-PORTAL ROLE ISOLATION · COLLEGE · HR RECRUITER · STUDENT
-        </span>
-        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Sign in to your PlaceFlow AI Portal</h1>
-        <p class="text-xs sm:text-sm text-stone-600 dark:text-zinc-400 max-w-2xl mx-auto">
-          Separate workspaces and backend permissions for College Placement Cells, Company HR Teams, and Students.
-        </p>
+    <!-- ==================== 3-PORTAL ROLE SIGN-IN GATE (CAMPUSFLOW EDITORIAL HERO) ==================== -->
+    <section id="auth-gate" class="space-y-12">
+      <!-- Screen-1 Editorial Split Hero -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center pt-4 pb-2 min-h-[72vh]">
+        <div class="lg:col-span-7 space-y-6">
+          <div class="inline-flex items-center gap-2 font-mono text-[11px] tracking-[0.14em] uppercase text-stone-500 dark:text-[#9E9D98]">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+            <span>LIVE FROM CAMPUS ERP &nbsp;·&nbsp; 3 PORTALS SYNCED</span>
+          </div>
+
+          <h1 class="text-5xl sm:text-6xl lg:text-[72px] font-black leading-[0.98] tracking-[-0.04em] text-stone-900 dark:text-[#F4F3EF]">
+            Messy<br>
+            resumes?<br>
+            The right<br>
+            student is<br>
+            <span class="signal-underline">already</span><br>
+            <span class="signal-underline">routed.</span>
+          </h1>
+
+          <p class="text-sm sm:text-base text-stone-600 dark:text-[#8E8D89] max-w-md leading-relaxed">
+            Upload a resume or pick a JD. Gemini audits real project proof, College ERP checks CGPA and semester, and students route straight to HR or guided upskilling.
+          </p>
+
+          <div class="flex items-center gap-3 pt-1 flex-wrap">
+            <a href="#portal-signin" class="interactive-btn px-5 py-2.5 rounded-xl bg-[#F04E23] hover:bg-[#D9421A] text-white text-xs font-semibold cursor-pointer">
+              Enter 3-Portal Workspace ↓
+            </a>
+            <button onclick="loginAs('college')" class="interactive-btn px-4 py-2.5 rounded-xl border border-stone-300 dark:border-[#32322E] text-xs font-semibold text-stone-700 dark:text-[#CBCAC4] hover:border-[#F04E23] cursor-pointer">
+              Instant Demo (College) →
+            </button>
+          </div>
+        </div>
+
+        <!-- Animated Right-Side Terminal Preview ("one audit, start to finish") -->
+        <div class="lg:col-span-5">
+          <div class="rounded-xl border border-stone-300 dark:border-[#272724] bg-white dark:bg-[#111110] p-5 sm:p-6 shadow-2xl space-y-5">
+            <div class="flex items-center justify-between gap-3 pb-3 border-b border-stone-200 dark:border-[#232320]">
+              <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-stone-300 dark:bg-[#2F2F2C]"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-stone-300 dark:bg-[#2F2F2C]"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-stone-300 dark:bg-[#2F2F2C]"></span>
+                </div>
+                <span class="font-mono text-[11px] text-stone-500 dark:text-[#7E7D79]">one audit, start to finish</span>
+              </div>
+              <button onclick="toggleHeroAnim()" id="hero-pause-btn"
+                class="interactive-btn px-3 py-1 rounded-md border border-stone-300 dark:border-[#32322E] text-[11px] font-mono text-stone-600 dark:text-[#CBCAC4] hover:border-[#F04E23] cursor-pointer">
+                Pause
+              </button>
+            </div>
+
+            <div class="space-y-4 font-mono text-xs min-h-[250px]">
+              <div class="grid grid-cols-12 gap-2 items-start">
+                <span class="col-span-3 text-[10px] tracking-wider uppercase text-stone-400 dark:text-[#6D6C68] pt-0.5">STUDENT</span>
+                <div class="col-span-9 text-stone-900 dark:text-[#F4F3EF] leading-relaxed">
+                  <span id="hero-line-student"></span><span class="cursor-block"></span>
+                </div>
+              </div>
+              <div class="grid grid-cols-12 gap-2 items-start transition-opacity duration-300" id="hero-row-gemini">
+                <span class="col-span-3 text-[10px] tracking-wider uppercase text-stone-400 dark:text-[#6D6C68] pt-0.5">GEMINI</span>
+                <div class="col-span-9 text-stone-600 dark:text-[#9E9D98]" id="hero-line-gemini"></div>
+              </div>
+              <div class="grid grid-cols-12 gap-2 items-start transition-opacity duration-300" id="hero-row-erp">
+                <span class="col-span-3 text-[10px] tracking-wider uppercase text-stone-400 dark:text-[#6D6C68] pt-0.5">ERP</span>
+                <div class="col-span-9 text-emerald-600 dark:text-emerald-400" id="hero-line-erp"></div>
+              </div>
+              <div class="grid grid-cols-12 gap-2 items-start transition-opacity duration-300" id="hero-row-route">
+                <span class="col-span-3 text-[10px] tracking-wider uppercase text-stone-400 dark:text-[#6D6C68] pt-0.5">ROUTE</span>
+                <div class="col-span-9 text-[#FF7854]" id="hero-line-route"></div>
+              </div>
+              <div class="grid grid-cols-12 gap-2 items-start transition-opacity duration-300" id="hero-row-sync">
+                <span class="col-span-3 text-[10px] tracking-wider uppercase text-stone-400 dark:text-[#6D6C68] pt-0.5">SYNC</span>
+                <div class="col-span-9 text-stone-600 dark:text-[#CBCAC4]" id="hero-line-sync"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <!-- College Login Card -->
-        <div class="interactive-card rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4 shadow-xs flex flex-col justify-between">
-          <div class="space-y-3">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-[11px] font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400">College Admin</div>
-                <h2 class="text-base font-semibold mt-0.5">Placement Cell Portal</h2>
-              </div>
-              <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300">ERP + Stats</span>
-            </div>
-            <p class="text-[11px] text-stone-500 dark:text-zinc-400">
-              Batch Auto-Router, College ERP CGPA/Sem check, branchwise acceptance rates, and waiver approvals.
-            </p>
-            <div class="space-y-2 text-xs">
-              <input id="login-college-email" type="email" value="admin@rit.edu" placeholder="admin@rit.edu"
-                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
-              <input id="login-college-pass" type="password" value="RIT-COLLEGE-2026" placeholder="Passcode"
-                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
-            </div>
+      <!-- 3-Portal Sign-In Grid -->
+      <div id="portal-signin" class="pt-8 border-t border-stone-200 dark:border-[#232320] space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+          <div>
+            <span class="font-mono text-[11px] uppercase tracking-[0.12em] text-[#FF7854]">Role-Based Access Control</span>
+            <h2 class="text-xl font-bold tracking-tight mt-0.5">Sign in to your PlaceFlow AI Portal</h2>
           </div>
-          <button onclick="loginAs('college')" class="interactive-btn w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer">
-            Sign In as College →
-          </button>
+          <p class="text-xs text-stone-500 dark:text-[#8E8D89]">
+            Isolated sessions &amp; backend permissions for College Admin, HR Recruiter, and Student.
+          </p>
         </div>
 
-        <!-- HR Login Card -->
-        <div class="interactive-card rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4 shadow-xs flex flex-col justify-between">
-          <div class="space-y-3">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-[11px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Recruiter Only</div>
-                <h2 class="text-base font-semibold mt-0.5">HR Talent &amp; Credibility</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- College Login Card -->
+          <div class="interactive-card rounded-2xl border border-stone-200 dark:border-[#272724] bg-white dark:bg-[#141413] p-5 space-y-4 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-[11px] font-mono uppercase tracking-wider text-[#FF7854]">College Admin</div>
+                  <h3 class="text-base font-semibold mt-0.5">Placement Cell Portal</h3>
+                </div>
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-stone-100 dark:bg-[#1D1D1B] border border-stone-200 dark:border-[#32322E] text-stone-600 dark:text-[#CBCAC4]">ERP + Stats</span>
               </div>
-              <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">Trust Score</span>
+              <p class="text-[11px] text-stone-500 dark:text-[#8E8D89]">
+                Batch Auto-Router, College ERP CGPA/Sem check, branchwise acceptance rates, and waiver approvals.
+              </p>
+              <div class="space-y-2 text-xs">
+                <input id="login-college-email" type="email" value="admin@rit.edu" placeholder="admin@rit.edu"
+                  class="w-full rounded-xl border border-stone-300 dark:border-[#32322E] bg-stone-50 dark:bg-[#0D0D0C] px-3 py-2 font-mono" />
+                <input id="login-college-pass" type="password" value="RIT-COLLEGE-2026" placeholder="Passcode"
+                  class="w-full rounded-xl border border-stone-300 dark:border-[#32322E] bg-stone-50 dark:bg-[#0D0D0C] px-3 py-2 font-mono" />
+              </div>
             </div>
-            <p class="text-[11px] text-stone-500 dark:text-zinc-400">
-              Inspect shortlisted candidates with 0–100 Credibility Scores, ERP academic trust, and proctored test badges.
-            </p>
-            <div class="space-y-2 text-xs">
-              <input id="login-hr-email" type="email" value="hr@cloudbackend.com" placeholder="hr@company.com"
-                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
-              <input id="login-hr-pass" type="password" value="RIT-HR-2026" placeholder="Passcode"
-                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
-            </div>
+            <button onclick="loginAs('college')" class="interactive-btn w-full py-2.5 px-4 rounded-xl bg-[#F04E23] hover:bg-[#D9421A] text-white text-xs font-semibold cursor-pointer">
+              Sign In as College →
+            </button>
           </div>
-          <button onclick="loginAs('hr')" class="interactive-btn w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer">
-            Sign In as HR Recruiter →
-          </button>
-        </div>
 
-        <!-- Student Login Card -->
-        <div class="interactive-card rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 space-y-4 shadow-xs flex flex-col justify-between">
-          <div class="space-y-3">
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-[11px] font-mono uppercase tracking-wider text-teal-600 dark:text-teal-400">Student Only</div>
-                <h2 class="text-base font-semibold mt-0.5">Student Placement Portal</h2>
+          <!-- HR Login Card -->
+          <div class="interactive-card rounded-2xl border border-stone-200 dark:border-[#272724] bg-white dark:bg-[#141413] p-5 space-y-4 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-[11px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Recruiter Only</div>
+                  <h3 class="text-base font-semibold mt-0.5">HR Talent &amp; Credibility</h3>
+                </div>
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-emerald-950/30 border border-emerald-800/50 text-emerald-400">Trust Score</span>
               </div>
-              <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300">AI Test + Prep</span>
-            </div>
-            <p class="text-[11px] text-stone-500 dark:text-zinc-400">
-              Browse JDs, prepare with YouTube courses, and prove lacking skills via webcam/mic proctored AI tests.
-            </p>
-            <div class="space-y-2 text-xs">
-              <input id="login-student-email" type="email" value="ananya.rao@rit.edu" placeholder="student@rit.edu"
-                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
-              <input id="login-student-pass" type="password" value="RIT-STUDENT-2026" placeholder="Passcode"
-                class="w-full rounded-xl border border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 px-3 py-2 font-mono" />
-              <div class="flex flex-wrap gap-1 pt-0.5">
-                <button onclick="pickDemoStudent('aarav.sharma@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Aarav</button>
-                <button onclick="pickDemoStudent('kiran.gowda@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Kiran</button>
-                <button onclick="pickDemoStudent('ananya.rao@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Ananya</button>
-                <button onclick="pickDemoStudent('rohan.verma@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Rohan</button>
-                <button onclick="pickDemoStudent('meera.nair@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-zinc-700 text-[11px] cursor-pointer">Meera</button>
+              <p class="text-[11px] text-stone-500 dark:text-[#8E8D89]">
+                Inspect shortlisted candidates with 0–100 Credibility Scores, ERP academic trust, and interview scheduling.
+              </p>
+              <div class="space-y-2 text-xs">
+                <input id="login-hr-email" type="email" value="hr@cloudbackend.com" placeholder="hr@company.com"
+                  class="w-full rounded-xl border border-stone-300 dark:border-[#32322E] bg-stone-50 dark:bg-[#0D0D0C] px-3 py-2 font-mono" />
+                <input id="login-hr-pass" type="password" value="RIT-HR-2026" placeholder="Passcode"
+                  class="w-full rounded-xl border border-stone-300 dark:border-[#32322E] bg-stone-50 dark:bg-[#0D0D0C] px-3 py-2 font-mono" />
               </div>
             </div>
+            <button onclick="loginAs('hr')" class="interactive-btn w-full py-2.5 px-4 rounded-xl border border-emerald-700/60 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer">
+              Sign In as HR Recruiter →
+            </button>
           </div>
-          <button onclick="loginAs('student')" class="interactive-btn w-full py-2.5 px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-semibold cursor-pointer">
-            Sign In as Student →
-          </button>
+
+          <!-- Student Login Card -->
+          <div class="interactive-card rounded-2xl border border-stone-200 dark:border-[#272724] bg-white dark:bg-[#141413] p-5 space-y-4 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-[11px] font-mono uppercase tracking-wider text-amber-500">Student Only</div>
+                  <h3 class="text-base font-semibold mt-0.5">Student Placement Portal</h3>
+                </div>
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-stone-100 dark:bg-[#1D1D1B] border border-stone-200 dark:border-[#32322E] text-stone-600 dark:text-[#CBCAC4]">AI Test + Prep</span>
+              </div>
+              <p class="text-[11px] text-stone-500 dark:text-[#8E8D89]">
+                Self-upload resumes, prepare for specific JDs with YouTube courses, and take webcam/mic proctored tests.
+              </p>
+              <div class="space-y-2 text-xs">
+                <input id="login-student-email" type="email" value="ananya.rao@rit.edu" placeholder="student@rit.edu"
+                  class="w-full rounded-xl border border-stone-300 dark:border-[#32322E] bg-stone-50 dark:bg-[#0D0D0C] px-3 py-2 font-mono" />
+                <input id="login-student-pass" type="password" value="RIT-STUDENT-2026" placeholder="Passcode"
+                  class="w-full rounded-xl border border-stone-300 dark:border-[#32322E] bg-stone-50 dark:bg-[#0D0D0C] px-3 py-2 font-mono" />
+                <div class="flex flex-wrap gap-1 pt-0.5">
+                  <button onclick="pickDemoStudent('aarav.sharma@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-[#32322E] text-[11px] cursor-pointer">Aarav</button>
+                  <button onclick="pickDemoStudent('kiran.gowda@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-[#32322E] text-[11px] cursor-pointer">Kiran</button>
+                  <button onclick="pickDemoStudent('ananya.rao@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-[#32322E] text-[11px] cursor-pointer">Ananya</button>
+                  <button onclick="pickDemoStudent('rohan.verma@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-[#32322E] text-[11px] cursor-pointer">Rohan</button>
+                  <button onclick="pickDemoStudent('meera.nair@rit.edu')" class="interactive-btn px-2 py-0.5 rounded border border-stone-200 dark:border-[#32322E] text-[11px] cursor-pointer">Meera</button>
+                </div>
+              </div>
+            </div>
+            <button onclick="loginAs('student')" class="interactive-btn w-full py-2.5 px-4 rounded-xl bg-zinc-900 dark:bg-[#F4F3EF] text-white dark:text-[#0D0D0C] text-xs font-semibold cursor-pointer">
+              Sign In as Student →
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -795,6 +917,7 @@
     async function init() {
       applySavedTheme();
       setupDropzone();
+      startHeroTerminal();
       document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
       document.addEventListener("visibilitychange", () => {
         if (document.hidden && state.activeTest) {
@@ -806,7 +929,7 @@
     }
 
     function applySavedTheme() {
-      const saved = localStorage.getItem("placeflow_theme") || "light";
+      const saved = localStorage.getItem("placeflow_theme_v2") || "dark";
       document.documentElement.classList.remove("light", "dark");
       document.documentElement.classList.add(saved);
       document.getElementById("theme-label").textContent = saved === "dark" ? "Light" : "Dark";
@@ -816,7 +939,7 @@
       const next = document.documentElement.classList.contains("dark") ? "light" : "dark";
       document.documentElement.classList.remove("light", "dark");
       document.documentElement.classList.add(next);
-      localStorage.setItem("placeflow_theme", next);
+      localStorage.setItem("placeflow_theme_v2", next);
       document.getElementById("theme-label").textContent = next === "dark" ? "Light" : "Dark";
     }
 
@@ -917,6 +1040,11 @@
       const isStudent = role === "student";
 
       document.getElementById("auth-gate").classList.toggle("hidden", isSignedIn);
+      document.getElementById("guest-nav").classList.toggle("hidden", isSignedIn);
+      document.getElementById("guest-nav").classList.toggle("sm:flex", !isSignedIn);
+      document.getElementById("header-staff-pill").classList.toggle("hidden", isSignedIn);
+      document.getElementById("header-staff-pill").classList.toggle("inline-flex", !isSignedIn);
+
       const nav = document.getElementById("main-nav");
       nav.classList.toggle("hidden", !isSignedIn);
       nav.classList.toggle("flex", isSignedIn);
@@ -925,8 +1053,8 @@
       sw.classList.toggle("hidden", !isSignedIn);
       sw.classList.toggle("flex", isSignedIn);
       if (isSignedIn) {
-        document.getElementById("sw-college").className = `interactive-btn px-2 py-1 rounded-lg text-[11px] font-semibold cursor-pointer ${isCollege ? "bg-blue-600 text-white" : "text-stone-600 dark:text-zinc-300"}`;
-        document.getElementById("sw-hr").className = `interactive-btn px-2 py-1 rounded-lg text-[11px] font-semibold cursor-pointer ${isHr ? "bg-emerald-600 text-white" : "text-stone-600 dark:text-zinc-300"}`;
+        document.getElementById("sw-college").className = `interactive-btn px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer ${isCollege ? "bg-[#F04E23] text-white" : "text-stone-600 dark:text-[#CBCAC4]"}`;
+        document.getElementById("sw-hr").className = `interactive-btn px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer ${isHr ? "bg-emerald-600 text-white" : "text-stone-600 dark:text-[#CBCAC4]"}`;
         document.getElementById("sw-student").value = isStudent ? state.user.email : "";
       }
 
@@ -2054,8 +2182,8 @@
         document.getElementById("tab-" + t).classList.toggle("hidden", t !== tab);
         const btn = document.getElementById("tab-btn-" + t);
         if (btn) {
-          btn.className = `interactive-btn px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer ${
-            t === tab ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm" : "text-stone-600 dark:text-zinc-400"
+          btn.className = `interactive-btn px-2 py-1.5 font-medium flex items-center gap-1.5 cursor-pointer ${
+            t === tab ? "text-stone-900 dark:text-[#F4F3EF] border-b-2 border-[#F04E23]" : "text-stone-500 dark:text-[#8E8D89] hover:text-stone-900 dark:hover:text-[#F4F3EF]"
           } ${btn.classList.contains("hidden") ? "hidden" : ""}`;
         }
       });
@@ -2108,6 +2236,73 @@
       setTimeout(() => el.remove(), 2800);
     }
     function escapeHtml(str) { return String(str ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
+
+    const HERO_TRACES = [
+      {
+        student: "03_Ananya_Rao_Skill_Gap.pdf · CloudBackend JD",
+        gemini: "Verified: Python, SQL, Git · Missing: Docker, REST APIs",
+        erp: "1MS23IS014 · CGPA 8.20 · Sem 7 · VERIFIED ✓",
+        route: "Upskill Track → YouTube Courses + Webcam Test",
+        sync: "Passed AI Test → Auto-promoted to HR Shortlist"
+      },
+      {
+        student: "02_Rohan_Verma_Buzzword.pdf · CloudBackend JD",
+        gemini: "Flagged 3 header buzzwords with zero project proof",
+        erp: "1MS23CS042 · CGPA 7.90 · Sem 7 · VERIFIED ✓",
+        route: "Flagged + Upskill · Credibility 79/100",
+        sync: "Transparently surfaced in College & HR Portals"
+      },
+      {
+        student: "05_Kiran_Gowda_Portfolio.pdf · CloudBackend JD",
+        gemini: "100% project-proven backend stack (FastAPI + Docker)",
+        erp: "1MS23EC055 · CGPA 7.25 · Sem 7 · VERIFIED ✓",
+        route: "Portfolio Exception → Coordinator Waiver Eligible",
+        sync: "Waiver Approved → Ready for HR Interview Slot"
+      }
+    ];
+    let heroPaused = false;
+    let heroTimer = null;
+    let heroIdx = 0;
+
+    function toggleHeroAnim() {
+      heroPaused = !heroPaused;
+      const btn = document.getElementById("hero-pause-btn");
+      if (btn) btn.textContent = heroPaused ? "Play" : "Pause";
+    }
+
+    function startHeroTerminal() {
+      let charPos = 0;
+      let phase = 0;
+      const tick = () => {
+        if (heroPaused || !document.getElementById("hero-line-student")) return;
+        const item = HERO_TRACES[heroIdx];
+        const sEl = document.getElementById("hero-line-student");
+        const gEl = document.getElementById("hero-line-gemini");
+        const eEl = document.getElementById("hero-line-erp");
+        const rEl = document.getElementById("hero-line-route");
+        const yEl = document.getElementById("hero-line-sync");
+
+        if (phase === 0) {
+          charPos += 2;
+          sEl.textContent = item.student.slice(0, charPos);
+          gEl.textContent = ""; eEl.textContent = ""; rEl.textContent = ""; yEl.textContent = "";
+          if (charPos >= item.student.length) { phase = 1; charPos = 0; }
+        } else if (phase <= 10) {
+          if (phase === 2) gEl.textContent = item.gemini;
+          if (phase === 4) eEl.textContent = item.erp;
+          if (phase === 6) rEl.textContent = item.route;
+          if (phase === 8) yEl.textContent = item.sync;
+          phase += 1;
+        } else {
+          heroIdx = (heroIdx + 1) % HERO_TRACES.length;
+          phase = 0;
+          charPos = 0;
+        }
+      };
+      tick();
+      clearInterval(heroTimer);
+      heroTimer = setInterval(tick, 180);
+    }
 
     init();
   </script>

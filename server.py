@@ -844,6 +844,7 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
 
                 record = {
                     "id": rec_id,
+                    "jdId": str(jd.get("id") or ""),
                     "fileName": file_name,
                     "status": "ok",
                     "uploadedBy": "student" if is_student_upload else "college",

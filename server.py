@@ -29,6 +29,7 @@ BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 SAMPLE_DIR = BASE_DIR / "sample_resumes"
 ENV_PATH = BASE_DIR / ".env"
+AUDIT_PATH = BASE_DIR / "appeal_audit.json"
 
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("PORT", "8765"))
@@ -48,6 +49,23 @@ DISRUPTION_EVENTS: list[dict[str, Any]] = []
 NOTIFICATIONS_STORE: list[dict[str, Any]] = []
 APPEALS_STORE: list[dict[str, Any]] = []
 AUDIT_LOG: list[dict[str, Any]] = []
+
+
+def _persist_audit_state() -> None:
+    """Durably persist appeal state and append-only audit entries to local JSON."""
+    payload = {"appeals": APPEALS_STORE, "auditLog": AUDIT_LOG}
+    temp_path = AUDIT_PATH.with_suffix(".tmp")
+    temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    temp_path.replace(AUDIT_PATH)
+
+
+if AUDIT_PATH.exists():
+    try:
+        _saved_audit_state = json.loads(AUDIT_PATH.read_text(encoding="utf-8"))
+        APPEALS_STORE.extend(_saved_audit_state.get("appeals", []))
+        AUDIT_LOG.extend(_saved_audit_state.get("auditLog", []))
+    except (OSError, ValueError, TypeError):
+        pass
 
 
 def load_api_key() -> str:
@@ -233,6 +251,7 @@ def _audit_transition(entity_type: str, entity_id: str, action: str, actor: str,
         "details": details[:500], "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
     }
     AUDIT_LOG.append(entry)
+    _persist_audit_state()
     return entry
 
 

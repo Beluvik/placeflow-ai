@@ -14,16 +14,10 @@ jobs:
           ref: main
       - name: Build source ZIP
         run: |
-          zip -r placeflow-ai-main.zip . \
-            -x ".git/*" \
-            -x ".env" \
-            -x ".env.*" \
-            -x "appeal_audit.json" \
-            -x "__pycache__/*" \
-            -x ".pytest_cache/*"
+          git archive --format=zip --output="$RUNNER_TEMP/placeflow-ai-main.zip" HEAD
       - uses: actions/upload-artifact@v4
         with:
           name: placeflow-ai-main
-          path: placeflow-ai-main.zip
+          path: ${{ runner.temp }}/placeflow-ai-main.zip
           if-no-files-found: error
           retention-days: 7

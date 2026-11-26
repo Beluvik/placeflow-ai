@@ -796,6 +796,10 @@
           <div id="student-decision-explanation" class="text-xs space-y-2"><p class="text-stone-500">Your decision explanation will appear after screening.</p></div>
           <div class="border-t border-stone-200 dark:border-zinc-700 pt-3 space-y-2"><label class="text-xs font-semibold" for="student-appeal-reason">Appeal / flag this decision</label><textarea id="student-appeal-reason" maxlength="1000" rows="3" placeholder="Briefly explain what you believe is incorrect and what evidence should be reviewed..." class="w-full rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-950 p-3 text-xs"></textarea><button onclick="submitStudentAppeal()" class="interactive-btn rounded-lg bg-blue-600 text-white px-4 py-2 text-xs font-semibold">Submit appeal for review</button></div>
           <div id="student-appeals-list" class="space-y-2 text-xs"></div>
+          <div class="border-t border-stone-200 dark:border-zinc-700 pt-3 space-y-2">
+            <h4 class="text-xs font-semibold">Your decision &amp; appeal history</h4>
+            <div id="student-audit-list" class="space-y-1 text-[11px] text-stone-500"><p>Loading your audit history…</p></div>
+          </div>
         </div>
       </div>
 
@@ -1938,6 +1942,16 @@
       const res = await apiFetch("/api/appeals"); if (!res.ok) return;
       const data = await res.json(); const el = document.getElementById("student-appeals-list");
       if (el) el.innerHTML = (data.appeals || []).map(a => '<div class="rounded-lg border border-stone-200 dark:border-zinc-700 p-2"><strong>' + escapeHtml(a.status) + '</strong> · ' + escapeHtml(a.createdAt) + '<div>' + escapeHtml(a.reason) + '</div><div class="text-stone-500">' + escapeHtml(a.reviewNote || "") + '</div></div>').join("") || '<p class="text-stone-500">No appeals submitted yet.</p>';
+      const auditRes = await apiFetch("/api/audit");
+      if (auditRes.ok) {
+        const auditData = await auditRes.json();
+        const auditEl = document.getElementById("student-audit-list");
+        if (auditEl) auditEl.innerHTML = (auditData.entries || []).slice().reverse().map(e =>
+          '<div class="border-l-2 border-blue-400 pl-2 py-1"><strong>' + escapeHtml(e.action) + '</strong> · ' +
+          escapeHtml(e.timestamp) + '<div>' + escapeHtml(e.fromStatus || "—") + ' → ' +
+          escapeHtml(e.toStatus || "—") + '</div><div>' + escapeHtml(e.details || "") + '</div></div>'
+        ).join("") || '<p>No decision or appeal events recorded yet.</p>';
+      }
     }
 
     async function submitStudentAppeal() {

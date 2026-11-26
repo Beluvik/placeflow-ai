@@ -770,15 +770,18 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                         self._send_json(404, {"error": "Appeal not found."})
                         return
                     previous = appeal["status"]
-                    appeal["status"] = status
-                    appeal["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
-                    appeal["reviewNote"] = note[:1000]
+                    target = None
+                    override_route = ""
                     if status == "OVERRIDDEN":
                         target = next((r for r in RESULTS_STORE if r.get("id") == appeal["recordId"]), None)
                         override_route = str(body.get("overrideRoute") or "").upper()
                         if not target or override_route not in {"SHORTLISTED", "PORTFOLIO_EXCEPTION", "UPSKILL_TRACK", "REROUTED"}:
                             self._send_json(400, {"error": "A valid overrideRoute and existing candidate record are required."})
                             return
+                    appeal["status"] = status
+                    appeal["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+                    appeal["reviewNote"] = note[:1000]
+                    if status == "OVERRIDDEN":
                         appeal["originalDecision"] = copy.deepcopy(target.get("routing", {}))
                         target["humanOverride"] = {"route": override_route, "reason": note[:1000], "by": session["email"], "at": appeal["updatedAt"], "automatedDecisionPreserved": True}
                         target["routing"]["humanOverride"] = copy.deepcopy(target["humanOverride"])

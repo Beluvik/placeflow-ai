@@ -721,25 +721,40 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                         item for item in JDS_STORE
                         if item.get("isActive", True) and item.get("id") != jd_id
                     ]
+                    impact_rows = []
                     for record in impacted:
                         before = copy.deepcopy(record.get("routing") or {})
                         after = copy.deepcopy(before)
                         if trigger_type in ("cancellation", "resource_unavailable"):
                             ranked = []
+                            evaluated_alternatives = []
                             for alternative in alternative_jds:
                                 candidate_route = evaluate_deterministic_rules(
                                     record.get("extracted", {}), alternative, alternative_jds,
                                     skill_test=record.get("skillTest")
                                 )
-                                if candidate_route.get("passesCgpa") and candidate_route.get("passesBranch") and candidate_route.get("passesBacklogs"):
-                                    ranked.append((
-                                        candidate_route.get("matchPct", 0),
-                                        alternative,
-                                        candidate_route,
-                                    ))
+                                gates = {
+                                    "cgpa": bool(candidate_route.get("passesCgpa")),
+                                    "branch": bool(candidate_route.get("passesBranch")),
+                                    "backlogs": bool(candidate_route.get("passesBacklogs")),
+                                }
+                                eligible = all(gates.values())
+                                evaluated_alternatives.append({
+                                    "jdId": alternative.get("id),
+                                    "company": alternative.get("company"),
+                                    "role": alternative.get("role"),
+                                    "fitPct": candidate_route.get("matchPct", 0),
+                                    "eligible": eligible,
+                                    "gates": gates,
+                                    "missingSkills": copy.deepcopy(candidate_route.get("missingMustHave", [])),
+                                    "matchedSkills": copy.deepcopy(candidate_route.get("matchedMustHave", [])),
+                                })
+                                if eligible:
+                                    ranked.append((candidate_route.get("matchPct", 0), alternative, candidate_route))
                             ranked.sort(key=lambda item: (item[0], item[1].get("company", "")), reverse=True)
                             if ranked:
                                 _, chosen_alternative, after = ranked[0]
+                                after["alternativeEvaluations"] = evaluated_alternatives
                                 after["route"] = "REROUTED"
                                 after["routeLabel"] = f"Auto-Rerouted · {chosen_alternative.get('company')}"
                                 after["verdictReason"] = (
@@ -762,6 +777,13 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                                     "No other active drive passed this student's academic eligibility rules."
                                 )
                                 after["alternativeJd"] = None
+                                after["alternativeEvaluations"] = evaluated_alternatives
+                            impact_rows.append({
+                                "recordId": record.get("id"),
+                                "studentName": record.get("extracted", {}).get("student_name") or "Student",
+                                "alternative": copy.deepcopy(after.get("alternativeJd")),
+                                "evaluations": copy.deepcopy(after.get("alternativeEvaluations", [])),
+                            })
                         else:
                             active_jds = [item for item in JDS_STORE if item.get("isActive", True)]
                             after = evaluate_deterministic_rules(
@@ -782,6 +804,24 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                             notification["alternative"] = copy.deepcopy(diff["alternative"])
                             NOTIFICATIONS_STORE.append(notification)
 
+                    alternative_distribution = {}
+                    for row in impact_rows:
+                        chosen = row.get("alternative")
+                        if chosen:
+                            company = chosen.get("company") or "Unknown"
+                            alternative_distribution[company] = alternative_distribution.get(company, 0) + 1
+                    found_count = sum(1 for row in impact_rows if row.get("alternative"))
+                    event["impactSummary"] = {
+                        "recomputed": len(impacted),
+                        "changed": len(diffs),
+                        "alternativeFound": found_count,
+                        "noAlternative": len(impact_rows) - found_count,
+                        "alternativeDistribution": [
+                            {"company": company, "count": count}
+                            for company, count in sorted(alternative_distribution.items(), key=lambda item: (-item[1], item[0]))
+                        ],
+                        "candidateExplanations": impact_rows,
+                    }
                     event["candidatePoolCount"] = len(target_records)
                     event["alternativeDriveCount"] = len(alternative_jds)
                     event["recomputedCount"] = len(impacted)
@@ -795,6 +835,7 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                                       "recomputedCount": len(impacted),
                                       "affectedCount": len(diffs),
                                       "unaffectedCount": event["unaffectedCount"],
+                                      "impactSummary": response_event.get("impactSummary", {}),
                                       "diffs": diffs})
             except (TypeError, ValueError) as exc:
                 self._send_json(400, {"error": f"Invalid disruption input: {exc}"})

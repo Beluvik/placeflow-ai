@@ -676,8 +676,21 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                         jd["isActive"] = False
 
                     event_id = f"dis_{secrets.token_hex(5)}"
-                    title = str(body.get("title") or ("Eligibility cutoff changed" if trigger_type == "eligibility_cutoff" else "Placement drive cancelled"))[:120]
-                    reason = str(body.get("details") or (f"{jd.get('company')} raised the CGPA cutoff from {old_cutoff:.2f} to {new_cutoff:.2f}." if trigger_type == "eligibility_cutoff" else f"{jd.get('company')} — {jd.get('role')} has been cancelled."))[:500]
+                    default_title = (
+                        "Eligibility cutoff changed" if trigger_type == "eligibility_cutoff"
+                        else ("Campus resource unavailable" if trigger_type == "resource_unavailable" else "Placement drive cancelled")
+                    )
+                    default_reason = (
+                        f"{jd.get('company')} raised the CGPA cutoff from {old_cutoff:.2f} to {new_cutoff:.2f}."
+                        if trigger_type == "eligibility_cutoff"
+                        else (
+                            f"A required campus resource for {jd.get('company')} — {jd.get('role')} is unavailable."
+                            if trigger_type == "resource_unavailable"
+                            else f"{jd.get('company')} — {jd.get('role')} has been cancelled."
+                        )
+                    )
+                    title = str(body.get("title") or default_title)[:120]
+                    reason = str(body.get("details") or default_reason)[:500]
                     event = {
                         "id": event_id, "triggerType": trigger_type, "jdId": jd_id,
                         "company": jd.get("company"), "role": jd.get("role"),

@@ -14,7 +14,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from erp_db import COLLEGE_ERP_DB, compute_credibility_score, verify_against_erp
-from router_engine import (
+from disruption_engine import build_before_after, make_notification, route_changed\nfrom router_engine import (
     DEFAULT_JDS,
     GEMINI_MODELS,
     build_jd_prep_plan,
@@ -42,7 +42,7 @@ SESSIONS: dict[str, dict[str, str]] = {}
 RESULTS_STORE: list[dict[str, Any]] = []
 JDS_STORE: list[dict[str, Any]] = copy.deepcopy(DEFAULT_JDS)
 ACTIVE_JD_SNAPSHOT: dict[str, Any] = JDS_STORE[0]
-TESTS_STORE: dict[str, dict[str, Any]] = {}
+TESTS_STORE: dict[str, dict[str, Any]] = {}\nDISRUPTION_EVENTS: list[dict[str, Any]] = []\nNOTIFICATIONS_STORE: list[dict[str, Any]] = []
 
 
 def load_api_key() -> str:
@@ -323,6 +323,27 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     }
                 )
             self._send_json(200, {"files": files})
+            return
+
+        if path == "/api/college/disruptions":
+            if not self._require_role("college"):
+                return
+            with _LOCK:
+                self._send_json(200, {"ok": True, "events": copy.deepcopy(DISRUPTION_EVENTS)})
+            return
+
+        if path == "/api/notifications":
+            session = self._require_role("college", "hr", "student")
+            if not session:
+                return
+            with _LOCK:
+                if session["role"] == "college":
+                    items = copy.deepcopy(NOTIFICATIONS_STORE)
+                elif session["role"] == "student":
+                    items = copy.deepcopy([n for n in NOTIFICATIONS_STORE if n.get("recipient") == session["email"].lower()])
+                else:
+                    items = copy.deepcopy([n for n in NOTIFICATIONS_STORE if "hr" in n.get("stakeholders", [])])
+            self._send_json(200, {"ok": True, "notifications": items})
             return
 
         if path == "/api/college/results":
@@ -616,6 +637,109 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                 self._send_json(200, {"ok": True, "erpVerification": res, "updatedRecord": updated_record})
             except Exception as exc:
                 self._send_json(400, {"error": str(exc)})
+            return
+
+        if path == "/api/college/disruption":
+            session = self._require_role("college")
+            if not session:
+                return
+            try:
+                body = self._read_json()
+                jd_id = str(body.get("jdId") or "").strip()
+                trigger_type = str(body.get("triggerType") or "eligibility_cutoff").strip().lower()
+                if trigger_type not in ("eligibility_cutoff", "cancellation"):
+                    self._send_json(400, {"error": "Trigger must be eligibility_cutoff or cancellation."})
+                    return
+                with _LOCK:
+                    jd = next((item for item in JDS_STORE if item.get("id") == jd_id), None)
+                    if not jd:
+                        self._send_json(404, {"error": "Target placement drive not found."})
+                        return
+                    old_cutoff = float(jd.get("minCgpa") or 0)
+                    new_cutoff = old_cutoff
+                    if trigger_type == "eligibility_cutoff":
+                        if body.get("newMinCgpa") in (None, ""):
+                            self._send_json(400, {"error": "newMinCgpa is required for a cutoff change."})
+                            return
+                        new_cutoff = float(body["newMinCgpa"])
+                        if not 0 <= new_cutoff <= 10:
+                            self._send_json(400, {"error": "CGPA cutoff must be between 0 and 10."})
+                            return
+                        if new_cutoff == old_cutoff:
+                            self._send_json(400, {"error": "New cutoff must differ from the current cutoff."})
+                            return
+                        jd["minCgpa"] = new_cutoff
+                    else:
+                        jd["isActive"] = False
+
+                    event_id = f"dis_{secrets.token_hex(5)}"
+                    title = str(body.get("title") or ("Eligibility cutoff changed" if trigger_type == "eligibility_cutoff" else "Placement drive cancelled"))[:120]
+                    reason = str(body.get("details") or (f"{jd.get('company')} raised the CGPA cutoff from {old_cutoff:.2f} to {new_cutoff:.2f}." if trigger_type == "eligibility_cutoff" else f"{jd.get('company')} — {jd.get('role')} has been cancelled."))[:500]
+                    event = {
+                        "id": event_id, "triggerType": trigger_type, "jdId": jd_id,
+                        "company": jd.get("company"), "role": jd.get("role"),
+                        "title": title, "reason": reason,
+                        "oldMinCgpa": old_cutoff, "newMinCgpa": new_cutoff,
+                        "createdAt": time.strftime("%Y-%m-%d %H:%M:%S"),
+                        "triggeredBy": session["email"],
+                    }
+                    target_records = [
+                        r for r in RESULTS_STORE
+                        if r.get("status") == "ok"
+                        and (r.get("jdId") or ACTIVE_JD_SNAPSHOT.get("id")) == jd_id
+                    ]
+                    if trigger_type == "eligibility_cutoff":
+                        low, high = sorted((old_cutoff, new_cutoff))
+                        impacted = []
+                        for record in target_records:
+                            ex = record.get("extracted", {})
+                            official = record.get("routing", {}).get("erpVerification", {}).get("officialCgpa")
+                            cgpa = float(official if official is not None else ex.get("cgpa") or 0)
+                            if low <= cgpa < high:
+                                impacted.append(record)
+                    else:
+                        impacted = target_records
+
+                    diffs = []
+                    for record in impacted:
+                        before = copy.deepcopy(record.get("routing") or {})
+                        if trigger_type == "cancellation":
+                            after = copy.deepcopy(before)
+                            after["route"] = "REROUTED"
+                            after["routeLabel"] = "Disruption: Drive Cancelled"
+                            after["verdictReason"] = f"Placement drive cancelled: {reason} Re-evaluate against another active drive."
+                        else:
+                            active_jds = [item for item in JDS_STORE if item.get("isActive", True)]
+                            after = evaluate_deterministic_rules(
+                                record.get("extracted", {}), jd, active_jds,
+                                skill_test=record.get("skillTest")
+                            )
+                        diff = build_before_after(record, after)
+                        record["routing"] = after
+                        record.setdefault("disruptionHistory", []).append({
+                            "eventId": event_id, "before": diff["before"], "after": diff["after"]
+                        })
+                        if route_changed(diff):
+                            diffs.append(diff)
+                            NOTIFICATIONS_STORE.append(make_notification(event, diff, event["createdAt"]))
+
+                    event["candidatePoolCount"] = len(target_records)
+                    event["recomputedCount"] = len(impacted)
+                    event["affectedCount"] = len(diffs)
+                    event["unaffectedCount"] = max(0, len(RESULTS_STORE) - len(impacted))
+                    event["diffs"] = diffs
+                    DISRUPTION_EVENTS.append(event)
+                    response_event = copy.deepcopy(event)
+
+                self._send_json(200, {"ok": True, "event": response_event,
+                                      "recomputedCount": len(impacted),
+                                      "affectedCount": len(diffs),
+                                      "unaffectedCount": event["unaffectedCount"],
+                                      "diffs": diffs})
+            except (TypeError, ValueError) as exc:
+                self._send_json(400, {"error": f"Invalid disruption input: {exc}"})
+            except Exception as exc:
+                self._send_json(500, {"error": str(exc)})
             return
 
         if path == "/api/hr/decision":

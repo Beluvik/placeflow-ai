@@ -426,7 +426,73 @@ def test_3_portal_rbac_and_proctored_test() -> None:
     assert 'id="email-queue"' not in actions_chunk
 
 
+
+
+def test_selective_campus_disruption_reroute() -> None:
+    """A cutoff event must recompute only candidates inside the changed boundary."""
+    server.RESULTS_STORE.clear()
+    server.DISRUPTION_EVENTS.clear()
+    server.NOTIFICATIONS_STORE.clear()
+    server.JDS_STORE[:] = copy.deepcopy(DEFAULT_JDS)
+    server.ACTIVE_JD_SNAPSHOT = server.JDS_STORE[0]
+    server.SESSIONS["disruption-college-token"] = {
+        "role": "college", "email": server.COLLEGE_EMAIL, "name": "Placement Cell"
+    }
+    server.SESSIONS["disruption-student-token"] = {
+        "role": "student", "email": "boundary.student@example.edu", "name": "Boundary Student"
+    }
+    skills = [
+        {"skill": "Python", "evidence_source": "CampusRide"},
+        {"skill": "SQL", "evidence_source": "CampusRide"},
+        {"skill": "REST APIs", "evidence_source": "CampusRide"},
+        {"skill": "Docker", "evidence_source": "CampusRide"},
+        {"skill": "Git", "evidence_source": "CampusRide"},
+    ]
+    def seed(record_id: str, email: str, cgpa: float) -> dict:
+        extracted = {
+            "student_name": record_id, "email": email, "branch": "CSE",
+            "cgpa": cgpa, "active_backlogs": 0, "verified_skills": copy.deepcopy(skills),
+            "unverified_claims": [], "upskilling_plan_7_days": [],
+        }
+        return {
+            "id": record_id, "jdId": "cloud", "status": "ok",
+            "extracted": extracted,
+            "routing": evaluate_deterministic_rules(extracted, server.JDS_STORE[0], server.JDS_STORE),
+            "skillTest": None, "ownerEmail": email,
+        }
+
+    impacted = seed("boundary_candidate", "boundary.student@example.edu", 7.8)
+    unaffected = seed("safe_candidate", "safe.student@example.edu", 9.2)
+    unaffected_before = copy.deepcopy(unaffected["routing"])
+    server.RESULTS_STORE.extend([impacted, unaffected])
+
+    status, payload = _invoke(
+        "POST", "/api/college/disruption",
+        {"jdId": "cloud", "triggerType": "eligibility_cutoff", "newMinCgpa": 8.0},
+        token="disruption-college-token",
+    )
+    response = json.loads(payload.decode("utf-8"))
+    assert status == 200 and response["ok"] is True
+    assert response["recomputedCount"] == 1
+    assert response["affectedCount"] == 1
+    assert response["unaffectedCount"] == 1
+    assert unaffected["routing"] == unaffected_before
+    assert impacted["routing"]["route"] != "SHORTLISTED"
+    assert len(server.NOTIFICATIONS_STORE) == 1
+    notification = server.NOTIFICATIONS_STORE[0]
+    assert notification["before"]["route"] == "SHORTLISTED"
+    assert notification["after"]["route"] == impacted["routing"]["route"]
+
+    student_status, student_payload = _invoke(
+        "GET", "/api/notifications", token="disruption-student-token"
+    )
+    student_alerts = json.loads(student_payload.decode("utf-8"))["notifications"]
+    assert student_status == 200 and len(student_alerts) == 1
+    assert student_alerts[0]["recipient"] == "boundary.student@example.edu"
+
+
 if __name__ == "__main__":
     test_erp_and_deterministic_router()
     test_3_portal_rbac_and_proctored_test()
+    test_selective_campus_disruption_reroute()
     print("ALL TESTS PASSED")

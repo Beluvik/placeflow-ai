@@ -537,7 +537,7 @@ def test_decision_appeal_audit_trail() -> None:
     assert status == 200
     assert record["routing"]["route"] == "SHORTLISTED"
     assert record["humanOverride"]["automatedDecisionPreserved"] is True
-    assert [entry["toStatus"] for entry in server.APPEALS_STORE[0]["history"]] == ["UNDER_REVIEW", "OVERRIDDEN"]
+    assert [entry["toStatus"] for entry in server.APPEALS_STORE[0]["history"]] == ["SUBMITTED", "UNDER_REVIEW", "OVERRIDDEN"]
     assert len(server.AUDIT_LOG) >= 4
     assert all(entry.get("timestamp") for entry in server.AUDIT_LOG)
     assert _invoke("POST", "/api/student/appeal", {"recordId": "not-owned", "reason": "Try to appeal another student's decision."}, token="appeal-student-token")[0] == 404

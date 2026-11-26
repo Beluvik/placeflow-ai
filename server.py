@@ -926,6 +926,9 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                         diff = build_before_after(record, after)
                         diff["alternative"] = copy.deepcopy(after.get("alternativeJd"))
                         record["routing"] = after
+                        explanation_record = {"extracted": record.get("extracted", {}), "routing": after, "jdId": (after.get("alternativeJd") or {}).get("jdId") or record.get("jdId")}
+                        record["decisionExplanation"] = _decision_explanation(explanation_record)
+                        _audit_transition("record", record.get("id", ""), "AUTOMATED_DECISION_UPDATED", session["email"], str(before.get("route") or ""), str(after.get("route") or ""), event.get("reason", ""))
                         record["disruptionHistory"] = record.get("disruptionHistory", [])
                         record["disruptionHistory"].append({
                             "eventId": event_id, "before": diff["before"], "after": diff["after"],
@@ -994,6 +997,7 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                     if not target or target.get("status") != "ok":
                         self._send_json(404, {"error": "Candidate record not found."})
                         return
+                    previous_hr = (target.get("hrAction") or {}).get("decision", "")
                     target["hrAction"] = {
                         "decision": decision,
                         "interviewSlot": slot,
@@ -1001,6 +1005,7 @@ class PlaceFlowHandler(BaseHTTPRequestHandler):
                         "updatedBy": session["email"],
                         "updatedAt": time.strftime("%Y-%m-%d %H:%M"),
                     }
+                    _audit_transition("record", rec_id, "HR_DECISION_CHANGED", session["email"], previous_hr, decision, note)
                     updated = copy.deepcopy(target)
                 self._send_json(200, {"ok": True, "record": updated})
             except Exception as exc:
